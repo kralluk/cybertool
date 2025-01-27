@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-backup:/data/backup
+    command: >
+      bash -c "
+      mongod --fork --logpath /var/log/mongodb.log --bind_ip_all &&
+      mongorestore --uri=mongodb://localhost:27017 /data/backup &&
+      tail -f /dev/null
+      "
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/cybertest_tool
+      ME_CONFIG_SITE_SESSIONSECRET: "supersecret"
+
+volumes:
+  mongo-data:

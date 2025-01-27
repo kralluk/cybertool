@@ -1,0 +1,10 @@
+django
+mongoengine
+django-debug-toolbar
+netifaces
+psutil
+python-nmapq
+psycopg2-binary
+pexpect
+channels
+daphne

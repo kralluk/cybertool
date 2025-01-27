@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Změnit výchozí síť</title>
+</head>
+<body>
+    <h1>Změnit výchozí síť</h1>
+    
+    {% if message %}
+        <p style="color: green;">{{ message }}</p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <label for="network">Vyberte síť:</label>
+        <select id="network" name="network" required>
+            {% for network in networks %}
+                <option value="{{ network.network }}">{{ network.interface }} - {{ network.network }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Nastavit jako výchozí</button>
+    </form>
+
+    <p><a href="/">Zpět na hlavní stránku</a></p>
+</body>
+</html>

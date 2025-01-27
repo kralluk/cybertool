@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dostupné scénáře</title>
+</head>
+<body>
+    <h1>Dostupné scénáře</h1>
+    <ul>
+        {% for scenario in scenarios %}
+            <li>
+                <h3>{{ scenario.name }}</h3>
+                <p>{{ scenario.description }}</p>
+                <a href="/scenarios/{{ scenario.id }}">Zobrazit podrobnosti</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <p><a href="/">Zpět na hlavní stránku</a></p>
+</body>
+</html>

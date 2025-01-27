@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail scénáře</title>
+</head>
+<body>
+    <h1>Detail scénáře: {{ scenario.name }}</h1>
+    <p>{{ scenario.description }}</p>
+
+    <button onclick="runScenario('{{ scenario.id }}')">Spustit scénář</button>
+    <button onclick="stopScenario()">Zastavit scénář</button>
+    <div id="log"></div>
+
+    <script>
+        function runScenario(scenarioId) {
+            const socket = new WebSocket(`ws://127.0.0.1:8000/ws/scenario/${scenarioId}/`);
+
+            socket.onopen = function() {
+                console.log("WebSocket připojen.");
+                // Posíláme požadavek na spuštění scénáře
+                socket.send(JSON.stringify({
+                    action: "start_scenario"
+                }));
+            };
+
+            socket.onmessage = function(event) {
+                console.log("Zpráva od serveru:", event.data);  // Pro debugging
+                const data = JSON.parse(event.data);
+                const logDiv = document.getElementById('log');
+                const message = document.createElement('p');
+                message.textContent = data.message;
+                logDiv.appendChild(message);
+            };
+
+            socket.onclose = function() {
+                console.log("WebSocket odpojen.");
+            };
+
+            socket.onerror = function(error) {
+                console.error("WebSocket chyba:", error);
+            };
+        }
+
+        function stopScenario() {
+            if (socket) {
+                socket.send(JSON.stringify({ action: "stop_scenario" }));
+                console.log("Scénář zastaven.");
+            }
+        }
+    </script>
+</body>
+</html>
