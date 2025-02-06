@@ -14,8 +14,10 @@
     <div id="log"></div>
 
     <script>
+        let socket;
+
         function runScenario(scenarioId) {
-            const socket = new WebSocket(`ws://127.0.0.1:8000/ws/scenario/${scenarioId}/`);
+            socket = new WebSocket(`ws://127.0.0.1:8000/ws/scenario/${scenarioId}/`);
 
             socket.onopen = function() {
                 console.log("WebSocket připojen.");

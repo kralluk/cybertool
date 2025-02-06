@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
-    "debug_toolbar",
+   # "debug_toolbar",
     "channels",
 ]
 
@@ -71,8 +71,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    #'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
+
+# Povol debug toolbar jen, když je DEBUG a USE_DEBUG_TOOLBAR True
+USE_DEBUG_TOOLBAR = False  # Nastav na True, pokud ho chceš zapnout
+
+if DEBUG and USE_DEBUG_TOOLBAR:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+
 
 ROOT_URLCONF = 'cybertool.urls'
 

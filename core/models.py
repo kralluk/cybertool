@@ -14,7 +14,10 @@ class NetworkInfo(Document):
 class Scenario(Document):
     name = StringField(required=True, max_length=255)
     description = StringField(required=True)
-    steps = ListField(DictField())
+    steps = ListField(
+        DictField(),  # Každý krok je slovník (dict)
+        required=True,  # Pole `steps` je povinné
+    )
     
     meta = {
         'collection': 'attack_scenarios',
@@ -27,6 +30,7 @@ class Action(Document):
 
     _id = StringField(primary_key=True)  # Používáme vlastní ID jako primární klíč
     name = StringField(required=True, max_length=255)
+    type = StringField(required=False, max_length=100, default="local") 
     command = StringField(required=True)
     description = StringField(required=False)  # Popis akce
     required_parameters = ListField(StringField(), default=[])  # Seznam povinných parametrů

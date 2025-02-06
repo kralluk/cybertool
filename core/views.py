@@ -5,9 +5,7 @@ from .network.scanner import scan_network
 from .scenarios.services import get_all_scenarios, get_scenario_detail
 from .scenarios.scenario_executor import execute_scenario
 from .models import NetworkInfo
-import threading
-
-
+import asyncio
 
 def home_view(request):
     # Pokud není v session žádná aktuální síť, automaticky uložíme a nastavíme výchozí
@@ -64,7 +62,8 @@ def scenario_detail_view(request, scenario_id):
     scenario = get_scenario_detail(scenario_id)
     return render(request, "core/scenario_detail.html", {"scenario": scenario})
 
-def run_scenario_view(request, scenario_id):
+
+async def run_scenario_view(request, scenario_id):
     """
     Spustí scénář a pošle zprávy přes WebSocket.
     """
@@ -75,9 +74,9 @@ def run_scenario_view(request, scenario_id):
 
         group_name = f"scenario_{scenario_id}"
 
-        # Spuštění scénáře ve vlákně
-        thread = threading.Thread(target=execute_scenario, args=(scenario_id, selected_network, group_name))
-        thread.start()
+        # Spuštění scénáře pomocí asynchronního tasku
+        from core.scenarios.scenario_executor import execute_scenario
+        asyncio.create_task(execute_scenario(scenario_id, selected_network, group_name))
 
         return JsonResponse({"message": f"Scénář '{scenario_id}' byl spuštěn."})
 

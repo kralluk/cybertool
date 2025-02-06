@@ -48,3 +48,14 @@ def replace_placeholders(text, replacements):
         placeholder = f"{{{{{key}}}}}"
         text = text.replace(placeholder, str(value))
     return text
+
+async def send_to_websocket(group_name, message):
+    """
+    Posílá zprávu přes WebSocket do skupiny.
+    """
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+    await channel_layer.group_send(
+        group_name,
+        {"type": "send_message", "message": message}
+    )

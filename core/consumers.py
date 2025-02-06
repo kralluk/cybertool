@@ -1,6 +1,7 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 from core.scenarios.globals import stop_scenario_execution
+import  asyncio
 
 class ScenarioConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -23,7 +24,6 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
 
         if data.get("action") == "start_scenario":
-            # Načtení aktuální sítě z session
             current_network = self.scope["session"].get("current_network", None)
 
             if not current_network:
@@ -32,29 +32,34 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
                 }))
                 return
 
-            # Spuštění scénáře asynchronně
+            # Spustí scénář na pozadí
             from core.scenarios.scenario_executor import execute_scenario
-            await execute_scenario(self.scenario_id, current_network, self.group_name)
+            asyncio.create_task(execute_scenario(self.scenario_id, current_network, self.group_name))
 
             # Odeslání zprávy zpět klientovi
             await self.send(text_data=json.dumps({
                 "message": f"Scénář {self.scenario_id} byl spuštěn na síti {current_network}."
             }))
         
+        
         elif data.get("action") == "stop_scenario":
-            # Nastavení signálu pro zastavení scénáře
+            # Zavolá funkci na zastavení scénáře
             stop_scenario_execution()
+            
+            # Pošle zprávu všem klientům, že scénář byl zastaven
             await self.channel_layer.group_send(
                 self.group_name,
                 {"type": "send_message", "message": "Scénář byl zastaven uživatelem."}
             )
 
-    def send_message(self, event):
+            
+    async def send_message(self, event):
         """
         Zpracuje zprávu typu `send_message` a pošle ji zpět klientovi.
         """
         message = event["message"]
-        self.send(text_data=json.dumps({"message": message}))
+        print(f"ODESÍLÁM NA FRONTEND: {message}")  
+        await self.send(text_data=json.dumps({"message": message}))
         
     async def disconnect(self, close_code):
         # Odpojení od skupiny
