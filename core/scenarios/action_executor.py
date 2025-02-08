@@ -1,9 +1,10 @@
 import asyncio
-import subprocess
+import subprocess, paramiko
 import os
 import signal
 from .globals import check_scenario_status, running_processes
 from .services import replace_placeholders, send_to_websocket
+from .ssh_manager import SSHManager
 
 
 async def execute_action(action, parameters, context, group_name):
@@ -65,35 +66,80 @@ async def execute_local_command(command, group_name):
 
 async def execute_ssh_command(action, parameters, group_name):
     """
-    Spustí příkaz přes SSH a vrátí výsledek.
+    Spustí příkaz přes SSH a posílá průběžné zprávy přes WebSocket.
     """
     try:
-        ssh_user = parameters["ssh_user"]
-        ssh_password = parameters["ssh_password"]
-        target_ip = parameters["target_ip"]
+        # Načtení parametrů
+        ssh_user = parameters.get("ssh_user")
+        ssh_password = parameters.get("ssh_password")
+        target_ip = parameters.get("target_ip")
         command = replace_placeholders(action["command"], parameters)
 
-        # Příklad implementace SSH pomocí paramiko (nutno přidat jako závislost)
-        import paramiko
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(target_ip, username=ssh_user, password=ssh_password)
+        if not ssh_user or not ssh_password or not target_ip:
+            await send_to_websocket(group_name, "Chybí potřebné SSH parametry (ssh_user, ssh_password, target_ip).")
+            return False, "Chybí SSH parametry."
 
-        stdin, stdout, stderr = client.exec_command(command)
-        output = stdout.read().decode().strip() + "\n" + stderr.read().decode().strip()
-        client.close()
+        ssh_manager = SSHManager(target_ip, ssh_user, ssh_password, group_name)
 
-        if stderr.channel.recv_exit_status() != 0:
-            await send_to_websocket(group_name, f"Chyba při SSH příkazu: {output}")
-            return False, output
+        # Připojení k SSH
+        if not await ssh_manager.connect():
+            return False, "Nepodařilo se připojit k SSH."
 
-        await send_to_websocket(group_name, f"Výstup SSH příkazu: {output}")
-        return True, output
+        # Spuštění příkazu
+        success, output = await ssh_manager.execute_command(command, use_sudo=True)
+
+        # Odpojení od SSH
+        await ssh_manager.close()
+
+        return success, output
+
+        # await send_to_websocket(group_name, f"Připojuji se k {target_ip} jako {ssh_user}...")
+
+        # # Inicializace SSH klienta
+        # client = paramiko.SSHClient()
+        # client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # # Připojení k SSH serveru
+        # client.connect(
+        #     target_ip,
+        #     username=ssh_user,
+        #     password=ssh_password,
+        # )
+
+        # await send_to_websocket(group_name, f"Připojení k {target_ip} úspěšné.")
+
+        # # Upraveny příkaz pro sudo s heslem
+        # #sudo_command = f"echo {ssh_password} | sudo -S {command}"
+
+        # # Spuštění příkazu
+        # await send_to_websocket(group_name, f"Spouštím SSH příkaz: sudo `{command}`")
+        # #stdin, stdout, stderr = client.exec_command(sudo_command)
+        # stdin, stdout, stderr = client.exec_command(f"ssh -t -t {target_ip} 'echo {ssh_password} | sudo -S {command}'")
+
+        # # Čtení výstupu v reálném čase
+        # output_lines = []
+        # for line in stdout:
+        #     await send_to_websocket(group_name, f"{line.strip()}")
+        #     output_lines.append(line.strip())
+
+        # error_lines = []
+        # for line in stderr:
+        #     await send_to_websocket(group_name, f"{line.strip()}")
+        #     error_lines.append(line.strip())
+
+        # # Zavření SSH připojení
+        # client.close()
+        # await send_to_websocket(group_name, f"Odpojil jsem se od {target_ip}.")
+
+        # # Vrácení výsledku
+        # if error_lines:
+        #     return False, "\n".join(error_lines)
+        # return True, "\n".join(output_lines)
 
     except Exception as e:
         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
         return False, str(e)
-
+    
 # PRIPRAVA NA METASPLOIT INTEGRACI
 
 # async def execute_metasploit_action(action, parameters, group_name):
