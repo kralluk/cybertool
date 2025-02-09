@@ -21,7 +21,7 @@ def get_active_interfaces():
 def save_network_info_to_db(interfaces):
     # Smazání starých dat
     NetworkInfo.objects.delete()
-
+    print("Stará data byla smazána.")
     # Uložení nových dat
     for iface, ip, net in interfaces:
         NetworkInfo(interface=iface, ip_address=ip, network=str(net)).save()

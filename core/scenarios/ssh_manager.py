@@ -2,7 +2,7 @@ import paramiko
 import time
 import asyncio
 from channels.layers import get_channel_layer
-from .globals import check_scenario_status
+from .globals import ssh_manager, set_ssh_manager
 
 class SSHManager:
     def __init__(self, target_ip, ssh_user, ssh_password, group_name):
@@ -11,6 +11,7 @@ class SSHManager:
         self.ssh_password = ssh_password
         self.group_name = group_name
         self.client = None
+        self.running_processes = []
 
     async def connect(self):
         """Připojí se k SSH serveru."""
@@ -25,6 +26,9 @@ class SSHManager:
                 look_for_keys=False,
                 allow_agent=False
             )
+            # Nastavení globální instance SSH manageru
+            set_ssh_manager(self)
+
             await self.send_to_websocket(f"Připojení k {self.target_ip} jako {self.ssh_user} úspěšné.")
             return True
         except Exception as e:
@@ -46,6 +50,10 @@ class SSHManager:
             await self.send_to_websocket(f"Spouštím SSH příkaz: `{command}`")
             loop = asyncio.get_event_loop()
             stdin, stdout, stderr = await loop.run_in_executor(None, lambda: self.client.exec_command(command, get_pty=True))
+
+            # Uložení informace o běžícím procesu
+            self.running_processes.append({"command": command, "stdin": stdin, "stdout": stdout, "stderr": stderr})
+
 
             if use_sudo:
                 await asyncio.sleep(0.5)  # Počkáme na výzvu k zadání hesla
@@ -79,6 +87,20 @@ class SSHManager:
         if self.client:
             self.client.close()
             await self.send_to_websocket(f"Odpojení od {self.target_ip}.")
+
+    async def stop_process(self):
+        """Zastaví všechny běžící SSH procesy (pošle SIGINT)."""
+        for process in self.running_processes:
+            stdin, stdout, stderr = process["stdin"], process["stdout"], process["stderr"]
+            
+            try:
+                stdin.channel.send("\x03")  # Pošle `Ctrl+C` (SIGINT) vzdálenému procesu
+                stdout.channel.recv_exit_status()  # Počkáme, než se proces ukončí
+                print(f"SSH proces {process['command']} byl ukončen.")
+            except Exception as e:
+                print(f"Chyba při ukončování SSH procesu: {e}")
+
+        self.running_processes.clear()  # Vyprázdníme seznam běžících procesů
 
     async def send_to_websocket(self, message):
         """Pošle zprávu do WebSocketu."""

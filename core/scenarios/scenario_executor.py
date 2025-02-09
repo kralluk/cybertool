@@ -15,13 +15,6 @@ async def execute_scenario(scenario_id, selected_network, group_name):
     reset_scenario_status()
     channel_layer = get_channel_layer()
 
-    #     # TEST: Poslání testovací zprávy do WebSocketu
-    # print(" ODESÍLÁM TESTOVACÍ ZPRÁVU DO FRONTENDU")
-    # await channel_layer.group_send(
-    #     group_name,
-    #     {"type": "send_message", "message": " TESTOVACÍ ZPRÁVA ZE SCENARIO_EXECUTOR"}
-    # )
-
     # Načtěte scénář z databáze
     scenario = load_scenario_from_db(scenario_id)
     if not scenario:
@@ -34,8 +27,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         print(f"Executing step {step['step_id']}")
         if check_scenario_status():
             await send_to_websocket(group_name, "Scénář byl zastaven uživatelem.")
-            break
-        print(f"Executing step {step['step_id']}")        
+            return
         # Popis aktuálního kroku
         description = replace_placeholders(step["description"], context)
         
@@ -56,7 +48,6 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         # Zpracování akce
            # Nahrazení placeholderů v parametrech akce
         parameters = {key: replace_placeholders(value, context) for key, value in step["parameters"].items()}
-        print(f"PARAMETERS: {parameters}")
         success, output = await execute_action(action, parameters, context, group_name)
 
         if not success:
@@ -66,7 +57,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         # Aktualizace kontextu
         #context.update(step.get("context_updates", {}))
         update_context(context, step, output, success)
-
+        
         await send_to_websocket(group_name, f"Krok {step['step_id']} byl úspěšně dokončen.")
 
     await send_to_websocket(group_name, "Scénář byl úspěšně dokončen.")

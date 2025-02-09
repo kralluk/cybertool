@@ -15,10 +15,10 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
 
-        # Debug: Zpráva po připojení
-        await self.send(text_data=json.dumps({
-            "message": f"WebSocket připojen ke scénáři {self.scenario_id}."
-        }))
+        # # Debug: Zpráva po připojení
+        # await self.send(text_data=json.dumps({
+        #     "message": f"WebSocket připojen ke scénáři {self.scenario_id}."
+        # }))
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -38,7 +38,8 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
 
             # Odeslání zprávy zpět klientovi
             await self.send(text_data=json.dumps({
-                "message": f"Scénář {self.scenario_id} byl spuštěn na síti {current_network}."
+                "message": f"Scénář byl spuštěn na síti {current_network}."
+              #  "message": f"Scénář {self.scenario_id} byl spuštěn na síti {current_network}."
             }))
         
         

@@ -8,12 +8,14 @@ from .models import NetworkInfo
 import asyncio
 
 def home_view(request):
-    # Pokud není v session žádná aktuální síť, automaticky uložíme a nastavíme výchozí
-    if 'current_network' not in request.session:
+    # Pokud není v session žádná aktuální síť nebo je prazne NetworkInfo, automaticky uložíme a nastavíme výchozí
+    if 'current_network' not in request.session or not NetworkInfo.objects.all():
+        print("Nastavuji výchozí síť.")
         current_network = save_and_set_default_network()
         request.session['current_network'] = str(current_network)
     else:
         # Načteme aktuální síť ze session
+        print("Načítám aktuální síť ze session.")
         current_network = request.session['current_network']
 
     # Data pro zobrazení

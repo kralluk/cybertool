@@ -2,7 +2,7 @@ import asyncio
 import subprocess, paramiko
 import os
 import signal
-from .globals import check_scenario_status, running_processes
+from .globals import check_scenario_status, running_processes, ssh_manager
 from .services import replace_placeholders, send_to_websocket
 from .ssh_manager import SSHManager
 
@@ -43,19 +43,20 @@ async def execute_local_command(command, group_name):
         while process.returncode is None:  # Pokud stále běží
             if check_scenario_status():  # Pokud byl scénář zastaven
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-                await send_to_websocket(group_name, "Akce byla zastavena uživatelem.")
-                return False, "Akce byla zastavena uživatelem."
+               # await send_to_websocket(group_name, "Akce byla zastavena uživatelem.")
+                return False #, "Akce byla zastavena uživatelem."
 
             await asyncio.sleep(0.5)
 
         stdout, stderr = await process.communicate()
         output = stdout.decode().strip() + "\n" + stderr.decode().strip()
 
-        if process.returncode != 0:
+        if process.returncode != 0 and not check_scenario_status():
             await send_to_websocket(group_name, f"Chyba při lokálním příkazu: {output}")
             return False, output
 
-        await send_to_websocket(group_name, f"Výstup lokálního příkazu: {output}")
+        if not check_scenario_status():
+            await send_to_websocket(group_name, f"Výstup lokálního příkazu: {output}")
         return True, output
 
     finally:
@@ -68,6 +69,7 @@ async def execute_ssh_command(action, parameters, group_name):
     """
     Spustí příkaz přes SSH a posílá průběžné zprávy přes WebSocket.
     """
+    global ssh_manager
     try:
         # Načtení parametrů
         ssh_user = parameters.get("ssh_user")
@@ -80,6 +82,7 @@ async def execute_ssh_command(action, parameters, group_name):
             return False, "Chybí SSH parametry."
 
         ssh_manager = SSHManager(target_ip, ssh_user, ssh_password, group_name)
+        print(f"SSH MANAGER inicii: {ssh_manager}")
 
         # Připojení k SSH
         if not await ssh_manager.connect():
