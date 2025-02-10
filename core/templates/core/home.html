@@ -1,20 +1,42 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <script src="{% static 'js/change_network.js' %}" defer></script>
     <title>CyberTool</title>
+
 </head>
 <body>
     <h1>CybertTool</h1>
     <p>Testovaná síť: {{ current_network }}</p>
+    
+    <h2>Změnit testovanou síť</h2>
+    {% if message %}
+        <p style="color: green;">{{ message }}</p>
+    {% endif %}
+
+    <form id="networkForm" method="post">
+        {% csrf_token %}
+        <label for="networkSelect">Vyberte síť:</label>
+        <select id="networkSelect" name="network" required>
+            {% for network in networks %}
+                <option value="{{ network.network }}" {% if network.network == current_network %}selected{% endif %}>
+                    {{ network.interface }} - {{ network.network }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Změnit</button>
+    </form>
 
     <h2>Možnosti:</h2>
     <ul>
         <li><a href="/scan-network/" target="_blank">Skenovat aktuální síť</a></li>
         <li><a href="/scenarios/">Zobrazit dostupné scénáře</a></li>
-        <li><a href="/change-network/">Změnit testovanou síť</a></li>
-        <li><a href="/execute-scenario/">Spustit scénář útoku</a></li>
+        <!-- <li><a href="/change-network/">Změnit testovanou síť</a></li> -->
+        <!-- <li><a href="/execute-scenario/">Spustit scénář útoku</a></li> -->
     </ul>
 </body>
 </html>

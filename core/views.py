@@ -7,23 +7,36 @@ from .scenarios.scenario_executor import execute_scenario
 from .models import NetworkInfo
 import asyncio
 
+from django.shortcuts import render
+from core.models import NetworkInfo
+
 def home_view(request):
-    # Pokud není v session žádná aktuální síť nebo je prazne NetworkInfo, automaticky uložíme a nastavíme výchozí
-    if 'current_network' not in request.session or not NetworkInfo.objects.all():
-        print("Nastavuji výchozí síť.")
+    networks = NetworkInfo.objects.all()
+
+    # Pokud není v session žádná aktuální síť nebo není žádná síť v DB, nastavíme výchozí
+    if 'current_network' not in request.session or not networks:
         current_network = save_and_set_default_network()
         request.session['current_network'] = str(current_network)
     else:
-        # Načteme aktuální síť ze session
-        print("Načítám aktuální síť ze session.")
         current_network = request.session['current_network']
 
-    # Data pro zobrazení
-    context = {
-        "current_network": current_network,
-    }
-    return render(request, "core/home.html", context)
+    message = None  # Výchozí hodnota pro hlášení
 
+    # Zpracování změny sítě, pokud byl odeslán formulář
+    if request.method == "POST":
+        selected_network = request.POST.get("network")
+        if selected_network and NetworkInfo.objects.filter(network=selected_network).count() > 0:
+            request.session['current_network'] = selected_network
+            message = f"Aktuální síť byla změněna na: {selected_network}"
+        else:
+            message = "Chyba při změně sítě. Zkontrolujte, zda je síť dostupná."
+
+    return render(request, "core/home.html", {
+        "current_network": current_network,
+        "networks": networks,
+        "message": message
+    })
+    
 def scan_network_view(request):
     # Načtení aktuální sítě ze session
     current_network = request.session.get('current_network')
