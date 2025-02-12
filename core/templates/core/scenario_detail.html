@@ -17,6 +17,7 @@
         let socket;
 
         function runScenario(scenarioId) {
+            console.log("Spouštím scénář s ID:", scenarioId);
             socket = new WebSocket(`ws://127.0.0.1:8000/ws/scenario/${scenarioId}/`);
 
             socket.onopen = function() {
@@ -52,5 +53,6 @@
             }
         }
     </script>
+    <p><a href="/">Zpět na hlavní stránku</a></p>
 </body>
 </html>

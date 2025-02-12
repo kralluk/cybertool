@@ -10,10 +10,15 @@ def get_all_scenarios():
 
 def get_scenario_detail(scenario_id):
     try:
-        return Scenario.objects.get(id=ObjectId(scenario_id))
-    except Scenario.DoesNotExist:
-        return None
-    
+        # Nejprve zkusíme načíst scénář přímo se scenario_id (jako string)
+        return Scenario.objects.get(id=scenario_id)
+    except DoesNotExist:
+        try:
+            # Pokud to selže, pokusíme se scénář načíst pomocí konverze na ObjectId
+            return Scenario.objects.get(id=ObjectId(scenario_id))
+        except DoesNotExist:
+            return None
+        
 def load_scenario_from_db(scenario_id):
     """Načte scénář podle ID z databáze."""
     try:

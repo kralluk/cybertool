@@ -75,6 +75,7 @@ def list_scenarios_view(request):
 def scenario_detail_view(request, scenario_id):
     # Načteme detail konkrétního scénáře
     scenario = get_scenario_detail(scenario_id)
+    print(scenario)
     return render(request, "core/scenario_detail.html", {"scenario": scenario})
 
 

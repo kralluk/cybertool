@@ -54,4 +54,4 @@ def set_ssh_manager(manager):
     """Nastaví globální SSH manager."""
     global ssh_manager
     ssh_manager = manager
-    print(f"✅ SSH Manager byl úspěšně nastaven: {ssh_manager}")
+    print(f"SSH Manager byl úspěšně nastaven: {ssh_manager}")

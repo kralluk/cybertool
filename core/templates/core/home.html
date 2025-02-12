@@ -23,11 +23,14 @@
         <label for="networkSelect">Vyberte síť:</label>
         <select id="networkSelect" name="network" required>
             {% for network in networks %}
-                <option value="{{ network.network }}" {% if network.network == current_network %}selected{% endif %}>
+                <option value="{{ network.network }}" {% if network.network == current_network %} selected {% endif %}>
                     {{ network.interface }} - {{ network.network }}
                 </option>
             {% endfor %}
         </select>
+        <!-- {% for network in networks %}
+        <p>Network: "{{ network.network }}" Current: "{{ current_network }}"</p>
+        {% endfor %} -->
         <button type="submit">Změnit</button>
     </form>
 
