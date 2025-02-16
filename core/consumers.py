@@ -47,11 +47,12 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
             # Zavolá funkci na zastavení scénáře
             stop_scenario_execution()
             
-            # Pošle zprávu všem klientům, že scénář byl zastaven
-            await self.channel_layer.group_send(
-                self.group_name,
-                {"type": "send_message", "message": "Scénář byl zastaven uživatelem."}
-            )
+            # - Zbytečnost, zajištuje scenario_executor.py
+            # # Pošle zprávu všem klientům, že scénář byl zastaven 
+            # await self.channel_layer.group_send(
+            #     self.group_name,
+            #     {"type": "send_message", "message": "Scénář byl zastaven uživatelem."}
+            # )
 
             
     async def send_message(self, event):
