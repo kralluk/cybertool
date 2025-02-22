@@ -5,7 +5,10 @@ from .action_executor import execute_action
 from channels.layers import get_channel_layer
 from .services import replace_placeholders, send_to_websocket
 import asyncio
-from core.network.traffic_monitor import start_sniffer, stop_sniffer
+from core.network.traffic_monitor import start_realtime_analysis, stop_realtime_analysis
+from core.models import NetworkInfo
+from core.context.observable_context import ObservableContext
+from core.context.callbacks import ip_blocked_callback
 
 from channels.layers import get_channel_layer
 
@@ -26,15 +29,23 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         return
 
     # Inicializace kontextu
-    context = {"selected_network": selected_network}
+    context = ObservableContext({"selected_network": selected_network})
+    network_info = NetworkInfo.objects(network=selected_network).first()
+    if network_info:
+        context["attacker_ip"] = network_info.ip_address
+    else:
+        print("IP adresa pro útočníka nebyla nalezena.")
+    
+    context.register_callback("ip_blocked", lambda key, value: ip_blocked_callback(key, value, group_name, context))
+
+    print(f"Context: {context}")
 
     # Převod seznamu kroků do slovníku pro snadný přístup podle step_id
     steps = {step["step_id"]: step for step in scenario["steps"]}
     # Předpokládáme, že první krok má nejnižší step_id nebo je explicitně definován jako první
     current_step_id = scenario["steps"][0]["step_id"] if scenario["steps"] else None
-    sniffer_process = None
-    sniffer_task = None
     
+
     try:
         while current_step_id is not None and current_step_id != "end":
             step = steps.get(current_step_id)
@@ -79,16 +90,11 @@ async def execute_scenario(scenario_id, selected_network, group_name):
             # await send_to_websocket(group_name, f"Krok {step['step_id']} byl úspěšně dokončen. {step.get('success_message', '')}")
             await send_to_websocket(group_name, f"Krok byl úspěšně dokončen. {replace_placeholders(step.get('success_message', ''), context)}")
 
-
-            # Spuštění snifferu, pokud je definováno pole "target_ip" a ještě nebyl spuštěn
-            if "target_ip" in context and not context.get("sniffer_running"):
-                context["sniffer_running"] = True
-                # Zavolat funkci, která nastartuje tshark s filtrem pro context["target_ip"]
-                sniffer_process, sniffer_task = await start_sniffer("eth0", context["target_ip"], group_name)
-                # Ulož si je do kontextu, abys je mohl případně zastavit později
-                context["sniffer_process"] = sniffer_process
-                context["sniffer_task"] = sniffer_task
-                print(f"Sniffer spuštěn pro IP: {context['target_ip']} PID: {sniffer_process.pid}")
+            # Zkusíme spustit monitoring, pokud máme target_ip a sniffer ještě neběží
+            if "target_ip" in context and not context.get("realtime_analysis_running"):
+                context["realtime_analysis_running"] = True
+                await start_realtime_analysis("eth1", context["target_ip"], context["attacker_ip"], group_name, context)
+                # Můžeš si to uložit i do contextu, ale stačí do lokálních proměnných
 
             # Zpracování větvení: pokud je definováno pole "branches", vyhodnotíme podmínky
             if "branches" in step:
@@ -101,7 +107,6 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                         # Pokud definované, vypíšeme branch_message
                         if "branch_message" in branch:
                             await send_to_websocket(group_name, replace_placeholders(branch["branch_message"],context))
-                            
                         break
                 if not branch_taken:
                     # Pokud žádná větev neodpovídá, použijeme standardní next_step
@@ -116,12 +121,11 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         await send_to_websocket(group_name, "Scénář byl úspěšně dokončen.")
         
     finally:
-        # Až scénář skončí nebo se potká jakákoliv výjimka, pokusíme se sniffer ukončit
-        if context.get("sniffer_running") and sniffer_process:
-            await stop_sniffer(sniffer_process)   # Funkce, která terminatuje process a počká na ukončení
-            context["sniffer_running"] = False
-            await send_to_websocket(group_name, "Sniffer byl ukončen po skončení scénáře.")
-
+        # Až skončí scénář (normálně nebo chybou), vypneme sniffer
+        if context.get("realtime_analysis_running"):
+            await stop_realtime_analysis()
+            context["realtime_analysis_running"] = False
+            
 def validate_required_params(action, parameters):
     required = action.get("required_parameters", [])
     for param in required:

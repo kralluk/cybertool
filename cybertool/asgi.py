@@ -8,17 +8,30 @@ https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
 """
 
 import os
+import subprocess
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from core.routing import websocket_urlpatterns
 
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cybertool.settings')
 
+# print("[GlobalAnalysis] Spouštím global capture na eth1.")
+# os.makedirs("pcaps", exist_ok=True)
+
+# capture_process = subprocess.Popen([
+#     "tshark",
+#     "-i", "eth1",
+#     "-w", "pcaps/eth1_capture.pcap",
+#     "-b", "filesize:50000",
+#     "-b", "files:5",
+# ])
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter(websocket_urlpatterns)
     ),
 })
+

@@ -1,57 +1,111 @@
 import asyncio
-import shlex
+import os
 from core.scenarios.globals import check_scenario_status
-
-async def start_sniffer(interface, target_ip, group_name):
-    """
-    Spustí tshark a vrátí handle (např. process) nebo tasks pro čtení a analýzu.
-    Můžeš parametry přizpůsobit – filtr, výstup do PCAP atd.
-    """
-    pcap_file = f"/capture_{target_ip}.pcap"
-
-    cmd = f"tshark -i {interface} -f 'host {target_ip}' -w {pcap_file}"
+from core.scenarios.services import send_to_websocket
+from core.network.detectors import BlockageDetector
 
 
-    # cmd = f"tshark -i {interface} -f 'host {target_ip}' -l -T fields -e frame.time -e ip.src -e ip.dst"
-    # -l zaručí "line-buffered" výstup; -T fields a -e ip.src atd. jsou příklad textového výstupu
-    process = await asyncio.create_subprocess_shell(
-        cmd,
+# -------------------------
+#  REALTIME ANALYSIS
+# -------------------------
+
+_realtime_process = None
+_realtime_task = None
+
+async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name, context):
+    cmd = [
+        "tshark",
+        "-i", interface,
+        "-f", f"host {target_ip}",
+        "-T", "fields",
+        "-e", "ip.src",
+        "-e", "ip.dst",
+        "-e", "tcp.flags.reset",
+        "-e", "icmp.type",
+        "-e", "icmp.code"
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
     )
 
-    # Tady spustíš analyzátor v jiné asynchronní úloze
-    task = asyncio.create_task(monitor_output(process, group_name))
+    # Tady vytvoříme list (nebo dict) detektorů
+    detectors = [
+        BlockageDetector(target_ip, attacker_ip, block_timeout=5.0),
+        # Můžeme sem přidat další, např. DnsDetector, HttpDetector...
+    ]
 
-    return process, task
+    # Spustíme asynchronní smyčku
+    task = asyncio.create_task(_realtime_analysis_loop(process, group_name, context, detectors))
 
-async def monitor_output(process, group_name):
+    return process, task 
+
+async def _realtime_analysis_loop(process, group_name, context, detectors, poll_interval=0.2):
     """
-    Čte řádky z process.stdout, analyzuje je (např. kdo je src/dst),
-    a vyhodnocuje, jestli došlo k blokaci, atd.
+    Čte řádky z tshark stdout a předává je detektorům, které mohou 
+    reagovat na pakety a aktualizovat např. context (blokace atd.).
+    
+    Argumenty:
+      - process: Subprocess (tshark) s otevřeným stdout.
+      - group_name: WebSocket group, kam posíláme logy.
+      - context: sdílený slovník (např. scenario context), kde lze nastavovat ip_blocked atp.
+      - detectors: seznam nebo dict detektorů, které umí zpracovat každý řádek (paket).
+      - poll_interval: čas (s), po kterém každou iteraci spánku 
+        dáváme šanci detektorům zkontrolovat timeouty atd.
     """
+    print("[RealtimeAnalysis] Start dekódovaného výstupu.")
     while True:
+        # 1) Check jestli scénář není zastaven
+        if check_scenario_status():
+            process.terminate()
+            break
+
+        # 2) Přečti řádku z tsharku
         line = await process.stdout.readline()
         if not line:
+            # tshark skončil?
             break
-        
+
         decoded = line.decode().strip()
-        # Tady se můžou parsovat sloupce – např. time, ip.src, ip.dst
-        # Můžeš klidně zavolat send_to_websocket, logovat si, cokoliv
-        # Nebo sledovat, jestli se tam objevuje traffic z cíl -> útočník
+        if decoded:
+            # Každé slovo může být odděleno tabulátory, např.:
+            # ip.src, ip.dst, tcp.flags.reset, icmp.type, icmp.code, ...
+            splitted = decoded.split("\t")
 
-        # Případný check scénáře (pokud budeš chtít zastavit)
-        if check_scenario_status():
-            process.kill()
-            break
+            # 3) Pošli řádku všem detektorům
+            for det in detectors:
+                det.handle_packet_line(splitted, context)
 
-    # Až skončí loop, tshark se pravděpodobně ukončil
-    # Můžeš tady do kontextu scénáře zapsat, co jsi zjistil atd.
+        # 4) Po krátké pauze dáme detektorům možnost provést kontrolu (timeouty atd.)
+        await asyncio.sleep(poll_interval)
+        for det in detectors:
+            det.periodic_check(context)
 
-async def stop_sniffer(process):
-    """ 
-    Jednoduše killne tshark
+    print("[RealtimeAnalysis] Smyčka ukončena, tshark skončil.")
+
+async def stop_realtime_analysis():
     """
-    if process:
-        process.terminate()
-        await process.wait()
+    Ukončí realtime analýzu, pokud běží.
+    """
+    global _realtime_process, _realtime_task
+
+    # Zrušíme task (pokud existuje)
+    if _realtime_task and not _realtime_task.done():
+        _realtime_task.cancel()
+        try:
+            await _realtime_task
+        except asyncio.CancelledError:
+            pass
+        _realtime_task = None
+
+    # Pošleme terminate tsharku
+    if _realtime_process:
+        _realtime_process.terminate()
+        try:
+            await _realtime_process.wait()
+        except ProcessLookupError:
+            pass
+        _realtime_process = None
+
+    print("[RealtimeAnalysis] Ukončena realtime analýza.")
