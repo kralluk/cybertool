@@ -7,5 +7,5 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from core.models import NetworkInfo
-        NetworkInfo.objects.delete() # Smazání starých dat o dostupných sítích
-        print("Stará data o sítích byla smazána.")   
+        # NetworkInfo.objects.delete() # Smazání starých dat o dostupných sítích
+        # print("Stará data o sítích byla smazána.")   

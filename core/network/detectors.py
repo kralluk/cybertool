@@ -5,11 +5,12 @@ class BlockageDetector:
     Detektor blokace na základě RST, ICMP administratively prohibited
     a časové heuristiky (pokud cíl X sekund neposlal packet útočníkovi).
     """
-    def __init__(self, target_ip, attacker_ip, block_timeout=5.0):
+    def __init__(self, target_ip, attacker_ip, block_timeout=10.0): # Defaultn9 je 5 sekund
         self.target_ip = target_ip
         self.attacker_ip = attacker_ip
         self.block_timeout = block_timeout
         self.last_response_time = time.time()  # Kdy naposled cíl něco poslal
+        self.blockage_reported = False
 
     def handle_packet_line(self, splitted, context):
         """
@@ -40,7 +41,10 @@ class BlockageDetector:
         Každá 'iterace' smyčky dostane šanci na extra kontrolu,
         např. zda neuplynulo moc času od posledního packetu od cíle.
         """
+        if self.blockage_reported:
+            return # Už jsme to reportovali, nemá cenu znovu
         if (time.time() - self.last_response_time) > self.block_timeout:
             # Timeout => cíl se odmlčel => považujeme za blok
             print(f"[BlockageDetector] cíl {self.target_ip} se odmlčel na více než {self.block_timeout} s.")
             context["ip_blocked"] = True
+            self.blockage_reported = True

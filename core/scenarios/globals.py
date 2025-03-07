@@ -55,3 +55,18 @@ def set_ssh_manager(manager):
     global ssh_manager
     ssh_manager = manager
     print(f"SSH Manager byl úspěšně nastaven: {ssh_manager}")
+
+def stop_attack_processes():
+    """
+    Zastaví všechny aktuálně běžící útokové procesy, aniž by zastavila celý scénář.
+    (Tedy neovlivní globální flag stop_scenario.)
+    """
+    for process in running_processes:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            print(f"Proces {process.pid} byl úspěšně ukončen.")
+        except ProcessLookupError:
+            print(f"Proces {process.pid} už neběží.")
+        except Exception as e:
+            print(f"Chyba při ukončení procesu {process.pid}: {e}")
+    running_processes.clear()

@@ -16,6 +16,7 @@ async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name,
     cmd = [
         "tshark",
         "-i", interface,
+        "-l", # Line buffered
         "-f", f"host {target_ip}",
         "-T", "fields",
         "-e", "ip.src",
@@ -32,7 +33,7 @@ async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name,
 
     # Tady vytvoříme list (nebo dict) detektorů
     detectors = [
-        BlockageDetector(target_ip, attacker_ip, block_timeout=5.0),
+        BlockageDetector(target_ip, attacker_ip, block_timeout=10.0),
         # Můžeme sem přidat další, např. DnsDetector, HttpDetector...
     ]
 
@@ -60,13 +61,11 @@ async def _realtime_analysis_loop(process, group_name, context, detectors, poll_
         if check_scenario_status():
             process.terminate()
             break
-
         # 2) Přečti řádku z tsharku
         line = await process.stdout.readline()
         if not line:
             # tshark skončil?
             break
-
         decoded = line.decode().strip()
         if decoded:
             # Každé slovo může být odděleno tabulátory, např.:
@@ -76,7 +75,6 @@ async def _realtime_analysis_loop(process, group_name, context, detectors, poll_
             # 3) Pošli řádku všem detektorům
             for det in detectors:
                 det.handle_packet_line(splitted, context)
-
         # 4) Po krátké pauze dáme detektorům možnost provést kontrolu (timeouty atd.)
         await asyncio.sleep(poll_interval)
         for det in detectors:

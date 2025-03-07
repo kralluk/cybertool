@@ -9,4 +9,3 @@ pexpect
 channels
 daphne
 paramiko
-pyshark

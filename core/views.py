@@ -10,16 +10,37 @@ import asyncio
 from django.shortcuts import render
 from core.models import NetworkInfo
 
+# def home_view(request):
+#     networks = NetworkInfo.objects.all()
+
+#     # Pokud není v session žádná aktuální síť nebo není žádná síť v DB, nastavíme výchozí
+#     if 'current_network' not in request.session or not networks:
+#         current_network = save_and_set_default_network()
+#         request.session['current_network'] = str(current_network)
+#     else:
+#         current_network = request.session['current_network']
+
+#     message = None  # Výchozí hodnota pro hlášení
+
+#     # Zpracování změny sítě, pokud byl odeslán formulář
+#     if request.method == "POST":
+#         selected_network = request.POST.get("network")
+#         if selected_network and NetworkInfo.objects.filter(network=selected_network).count() > 0:
+#             request.session['current_network'] = selected_network
+#             message = f"Aktuální síť byla změněna na: {selected_network}"
+#         else:
+#             message = "Chyba při změně sítě. Zkontrolujte, zda je síť dostupná."
+
+#     return render(request, "core/home.html", {
+#         "current_network": current_network,
+#         "networks": networks,
+#         "message": message
+#     })
+
 def home_view(request):
     networks = NetworkInfo.objects.all()
-
-    # Pokud není v session žádná aktuální síť nebo není žádná síť v DB, nastavíme výchozí
-    if 'current_network' not in request.session or not networks:
-        current_network = save_and_set_default_network()
-        request.session['current_network'] = str(current_network)
-    else:
-        current_network = request.session['current_network']
-
+    current_network = request.session.get('current_network', None)
+    
     message = None  # Výchozí hodnota pro hlášení
 
     # Zpracování změny sítě, pokud byl odeslán formulář
@@ -36,6 +57,7 @@ def home_view(request):
         "networks": networks,
         "message": message
     })
+
     
 def scan_network_view(request):
     # Načtení aktuální sítě ze session

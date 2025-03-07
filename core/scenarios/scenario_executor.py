@@ -28,6 +28,8 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         await send_to_websocket(group_name, f"Scénář s ID '{scenario_id}' nebyl nalezen.")
         return
 
+    interface = NetworkInfo.objects(network=selected_network).first().interface
+
     # Inicializace kontextu
     context = ObservableContext({"selected_network": selected_network})
     network_info = NetworkInfo.objects(network=selected_network).first()
@@ -80,7 +82,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                 return
 
             success, output = await execute_action(action, parameters, context, group_name)
-            if not success:
+            if not success and not context.get("force_end_current_step"): # Pokud byla akce neúspěšná a nebylo vynuceno ukončení kroku pomocí callbacku
                 await send_to_websocket(group_name, step.get("failure_message", "Akce selhala. Ukončuji scénář."))
                 await send_to_websocket(group_name, f"Scénář ukončen.")
                 return
@@ -93,7 +95,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
             # Zkusíme spustit monitoring, pokud máme target_ip a sniffer ještě neběží
             if "target_ip" in context and not context.get("realtime_analysis_running"):
                 context["realtime_analysis_running"] = True
-                await start_realtime_analysis("eth1", context["target_ip"], context["attacker_ip"], group_name, context)
+                await start_realtime_analysis(interface, context["target_ip"], context["attacker_ip"], group_name, context)
                 # Můžeš si to uložit i do contextu, ale stačí do lokálních proměnných
 
             # Zpracování větvení: pokud je definováno pole "branches", vyhodnotíme podmínky
