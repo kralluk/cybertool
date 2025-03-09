@@ -5,6 +5,7 @@ import signal
 from .globals import check_scenario_status, running_processes, ssh_manager
 from .services import replace_placeholders, send_to_websocket
 from .ssh_manager import SSHManager
+from pymetasploit3.msfrpc import MsfRpcClient
 
 
 async def execute_action(action, parameters, context, group_name):
@@ -108,27 +109,45 @@ async def execute_ssh_command(action, parameters, group_name):
         return False, str(e)
 
 
+async def execute_metasploit_action(action, parameters, context, group_name):
+    # Parametry z akce (např. 'module': exploit/windows/smb/ms17_010_eternalblue)
+    module_name = action.get('module') or parameters.get('module')
+    options = action.get('options', {})
+    # Příp. sloučit s `parameters` z kontextu (RHOST, LHOST, PAYLOAD atd.)
 
-# PRIPRAVA NA METASPLOIT INTEGRACI
+    # Připojení k msfrpcd (předpokládáme, že kontejner se jmenuje 'metasploit' v Docker Compose)
+    client = MsfRpcClient('mysecret', server='metasploit', port=55553)
 
-# async def execute_metasploit_action(action, parameters, group_name):
-#     """
-#     Spustí příkaz nebo modul Metasploitu (rozšiřitelné).
-#     """
-#     try:
-#         # Příklad použití Metasploit RPC API (musíte nastavit MSF API na serveru)
-#         import msfrpc
-#         client = msfrpc.Msfrpc({})
-#         client.login('msf', 'password')  # Nastavte přihlašovací údaje
+    # Vytvoření exploitu
+    exploit = client.modules.use('exploit', module_name)
 
-#         module = action["module"]  # Např. `auxiliary/scanner/ssh/ssh_login`
-#         options = {key: replace_placeholders(value, parameters) for key, value in action["options"].items()}
+    # Nastavení všech voleb
+    for key, value in options.items():
+        exploit[key] = value
 
-#         response = client.call('module.execute', [module, options])
+    # Pokud exploit očekává PAYLOAD
+    payload_name = options.get('PAYLOAD', None)
+    if payload_name:
+        payload = client.modules.use('payload', payload_name)
+        # Třeba nastavit i parametry PAYLOADu: LHOST, LPORT...
+    else:
+        payload = None
 
-#         await send_to_websocket(group_name, f"Metasploit akce spuštěna: {response}")
-#         return True, response
+    # Spuštění exploitu
+    job_id = exploit.execute(payload=payload)
+    if not job_id:
+        return False, "Nebyl vytvořen job pro exploit."
 
-#     except Exception as e:
-#         await send_to_websocket(group_name, f"Chyba při Metasploit akci: {str(e)}")
-#         return False, str(e)
+    # Polling na dokončení jobu
+    for _ in range(30):  # 30 vteřin
+        if job_id not in client.jobs.list:
+            # job skončil
+            break
+        await asyncio.sleep(1)
+
+    if job_id in client.jobs.list:
+        # Job stále běží
+        return False, "Exploit stále běží, vypršel timeout."
+
+    # Tady můžeš analyzovat session, logs atd.
+    return True, "Exploit skončil úspěšně (nebo analyzuj podrobněji)."

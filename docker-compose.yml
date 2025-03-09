@@ -26,5 +26,14 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/cybertest_tool
       ME_CONFIG_SITE_SESSIONSECRET: "supersecret"
 
+  metasploit:
+    build: 
+      context: .
+      dockerfile: dockerfile.msf  # jméno Dockerfile
+    container_name: metasploit
+    restart: always
+    ports:
+      - "55553:55553"
+
 volumes:
   mongo-data:

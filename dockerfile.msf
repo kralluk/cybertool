@@ -1,0 +1,13 @@
+# Soubor: Dockerfile
+FROM kalilinux/kali-rolling
+
+# Oprava neinteraktivního režimu (aby apt-get nevyžadoval user input):
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    metasploit-framework \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# Spustíme msfrpcd s heslem 'mysecret' na portu 55553, naslouchající na všech IP.
+CMD ["bash", "-c", "msfrpcd -P mysecret -S -a 0.0.0.0 -p 55553 && tail -f /dev/null"]
