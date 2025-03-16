@@ -49,6 +49,9 @@ def load_action(action_id):
     
 def replace_placeholders(text, replacements):
     """Nahradí zástupné hodnoty v textu."""
+    if text is None:
+        return None  # Pokud je text None, jen ho vrať (nedělej replace)
+    
     for key, value in replacements.items():
         placeholder = f"{{{{{key}}}}}"
         text = text.replace(placeholder, str(value))

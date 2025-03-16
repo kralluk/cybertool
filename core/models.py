@@ -35,6 +35,8 @@ class Action(Document):
     description = StringField(required=False)  # Popis akce
     required_parameters = ListField(StringField(), default=[])  # Seznam povinných parametrů
     success_keywords = ListField(StringField(), default=[])  # Klíčová slova pro úspěch
+    options = DictField()  # Další volitelné parametry (např. pro Metasploit)
+
 
     def __str__(self):
         return f"{self.name} ({self._id})"

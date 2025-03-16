@@ -14,7 +14,9 @@ async def execute_action(action, parameters, context, group_name):
     """
 
     action_type = action.get("type", "local")  # Defaultně předpokládáme `local`
-    command = replace_placeholders(action["command"], parameters)
+    command = action.get("command", None)
+    if command:
+        command = replace_placeholders(command, parameters)
 
 
     if action_type == "local":
@@ -24,8 +26,8 @@ async def execute_action(action, parameters, context, group_name):
     elif action_type == "python":
         from core.scenarios.python_actions import execute_python_action
         return await execute_python_action(action, parameters, context, group_name)
-    # elif action_type == "metasploit":
-    #     return await execute_metasploit_action(action, parameters, group_name)
+    elif action_type == "metasploit":
+        return await execute_metasploit_action(action, parameters, context, group_name)
     else:
         await send_to_websocket(group_name, f"Neznámý typ akce: {action_type}")
         return False, f"Neznámý typ akce: {action_type}"
@@ -107,47 +109,69 @@ async def execute_ssh_command(action, parameters, group_name):
     except Exception as e:
         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
         return False, str(e)
-
-
+    
 async def execute_metasploit_action(action, parameters, context, group_name):
-    # Parametry z akce (např. 'module': exploit/windows/smb/ms17_010_eternalblue)
-    module_name = action.get('module') or parameters.get('module')
-    options = action.get('options', {})
-    # Příp. sloučit s `parameters` z kontextu (RHOST, LHOST, PAYLOAD atd.)
+    """
+    Spustí Metasploit exploit (nebo libovolný 'exploit' modul) 
+    s ohledem na placeholdery definované v akci (options).
+    """
+    # 1) Načteme options z akce
+    final_options = action.get("options", {})
 
-    # Připojení k msfrpcd (předpokládáme, že kontejner se jmenuje 'metasploit' v Docker Compose)
-    client = MsfRpcClient('mysecret', server='metasploit', port=55553)
+    # 2) Vytvoříme placeholder_context z context + parameters
+    placeholder_context = {**context, **parameters}
 
-    # Vytvoření exploitu
+    # 3) Nahradíme placeholdery
+    replaced_options = {}
+    for key, val in final_options.items():
+        replaced_options[key] = replace_placeholders(val, placeholder_context)
+
+    # 4) Získáme module_name z replaced_options
+    module_name = replaced_options.pop("module", None)
+    if not module_name:
+        return False, "Chybí 'module' v options."
+
+    # 5) Připojení k Metasploit RPC
+    client = MsfRpcClient('mysecret', server='127.0.0.1', port=55553)
+
+    # 6) Vytvoření exploitu
     exploit = client.modules.use('exploit', module_name)
 
-    # Nastavení všech voleb
-    for key, value in options.items():
+    # 7) Nastavení voleb (kromě PAYLOAD)
+    for key, value in replaced_options.items():
+        if key.upper() == "PAYLOAD":
+            continue
         exploit[key] = value
 
-    # Pokud exploit očekává PAYLOAD
-    payload_name = options.get('PAYLOAD', None)
+    # 8) Pokud je definován PAYLOAD
+    payload_name = replaced_options.get("PAYLOAD")
     if payload_name:
         payload = client.modules.use('payload', payload_name)
-        # Třeba nastavit i parametry PAYLOADu: LHOST, LPORT...
     else:
         payload = None
 
-    # Spuštění exploitu
-    job_id = exploit.execute(payload=payload)
-    if not job_id:
+    # 9) Spuštění exploitu
+    job_result = exploit.execute(payload=payload)
+    if not job_result:
         return False, "Nebyl vytvořen job pro exploit."
 
-    # Polling na dokončení jobu
-    for _ in range(30):  # 30 vteřin
-        if job_id not in client.jobs.list:
-            # job skončil
+    # Může vrátit buď int job_id, nebo dict { 'job_id': int, 'uuid': ... }
+    if isinstance(job_result, dict):
+        actual_job_id = job_result.get("job_id")
+    else:
+        actual_job_id = job_result
+
+    if not actual_job_id:
+        return False, "Nepodařilo se získat job_id."
+
+    # 10) Polling na dokončení jobu (max 30s)
+    for _ in range(30):
+        if actual_job_id not in client.jobs.list:
             break
         await asyncio.sleep(1)
 
-    if job_id in client.jobs.list:
-        # Job stále běží
+    if actual_job_id in client.jobs.list:
         return False, "Exploit stále běží, vypršel timeout."
 
-    # Tady můžeš analyzovat session, logs atd.
-    return True, "Exploit skončil úspěšně (nebo analyzuj podrobněji)."
+    # 11) Případně analyzuj session, logs atd.
+    return True, "Exploit skončil úspěšně."
