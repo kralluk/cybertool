@@ -13,11 +13,11 @@ services:
       bash -c "
       mongod --fork --logpath /var/log/mongodb.log --bind_ip_all &&
       mongorestore --uri=mongodb://localhost:27017 /data/backup &&
-      tail -f /dev/null
+      while true; do sleep 300; mongodump --uri=mongodb://localhost:27017 --db=cybertest_tool --out=/data/backup; done
       "
 
   mongo-express:
-    image: mongo-express
+    image: mongo-express:1.0.0-alpha.4
     container_name: mongo-express
     restart: always
     ports:
@@ -25,6 +25,7 @@ services:
     environment:
       ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/cybertest_tool
       ME_CONFIG_SITE_SESSIONSECRET: "supersecret"
+
 
   metasploit:
     build: 
