@@ -30,11 +30,10 @@ services:
   metasploit:
     build: 
       context: .
-      dockerfile: dockerfile.msf  # jméno Dockerfile
+      dockerfile: dockerfile.msf
     container_name: metasploit
     restart: always
-    ports:
-      - "55553:55553"
+    network_mode: host
 
 volumes:
   mongo-data:

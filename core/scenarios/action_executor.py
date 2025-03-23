@@ -112,21 +112,23 @@ async def execute_ssh_command(action, parameters, group_name):
     
 async def execute_metasploit_action(action, parameters, context, group_name):
     """
-    Spustí Metasploit exploit (nebo libovolný 'exploit' modul) 
+    Spustí Metasploit exploit (nebo libovolný 'exploit' modul)
     s ohledem na placeholdery definované v akci (options).
+    
+    Navíc:
+      - RHOSTS, RPORT apod. zapisuje do `exploit[...]`
+      - LHOST, LPORT zapisuje do `payload[...]`
     """
-    # 1) Načteme options z akce
+    # 1) Načteme options z akce (co definoval JSON v DB)
     final_options = action.get("options", {})
 
-    # 2) Vytvoříme placeholder_context z context + parameters
+    # 2) Sloučíme parametry (ze scénáře) a context
     placeholder_context = {**context, **parameters}
 
-    # 3) Nahradíme placeholdery
-    replaced_options = {}
-    for key, val in final_options.items():
-        replaced_options[key] = replace_placeholders(val, placeholder_context)
+    # 3) Nahradíme placeholdery rekurzivně (ať umí i dict)
+    replaced_options = replace_placeholders(final_options, placeholder_context)
 
-    # 4) Získáme module_name z replaced_options
+    # 4) Získáme module_name
     module_name = replaced_options.pop("module", None)
     if not module_name:
         return False, "Chybí 'module' v options."
@@ -137,16 +139,26 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     # 6) Vytvoření exploitu
     exploit = client.modules.use('exploit', module_name)
 
-    # 7) Nastavení voleb (kromě PAYLOAD)
-    for key, value in replaced_options.items():
-        if key.upper() == "PAYLOAD":
+    # 7) Nastavení voleb do exploitu, s výjimkou LHOST/LPORT/PAYLOAD
+    for key, value in list(replaced_options.items()):
+        up_key = key.upper()
+        # PAYLOAD, LHOST, LPORT budeme řešit níže pro payload
+        if up_key in ("PAYLOAD", "LHOST", "LPORT"):
             continue
         exploit[key] = value
 
-    # 8) Pokud je definován PAYLOAD
+    # 8) Pokud je definován PAYLOAD, nastavíme ho
     payload_name = replaced_options.get("PAYLOAD")
     if payload_name:
         payload = client.modules.use('payload', payload_name)
+        # Pokud v replaced_options je LHOST/LPORT, dáme ho do payload
+        lhost_val = replaced_options.get("LHOST")
+        if lhost_val:
+            payload["LHOST"] = lhost_val
+
+        lport_val = replaced_options.get("LPORT")
+        if lport_val:
+            payload["LPORT"] = lport_val
     else:
         payload = None
 
@@ -173,5 +185,5 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     if actual_job_id in client.jobs.list:
         return False, "Exploit stále běží, vypršel timeout."
 
-    # 11) Případně analyzuj session, logs atd.
+    # 11) Případně analyzuj session, logs, atd.
     return True, "Exploit skončil úspěšně."

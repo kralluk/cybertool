@@ -47,15 +47,37 @@ def load_action(action_id):
         print(f"Akce s ID '{action_id}' nebyla nalezena.")
         return None
     
-def replace_placeholders(text, replacements):
-    """Nahradí zástupné hodnoty v textu."""
-    if text is None:
-        return None  # Pokud je text None, jen ho vrať (nedělej replace)
+def replace_placeholders(value, context):
+    """
+    Nahrazuje {{key}} v různých typech (str, dict, list) 
+    podle hodnot definovaných v `context`.
     
-    for key, value in replacements.items():
-        placeholder = f"{{{{{key}}}}}"
-        text = text.replace(placeholder, str(value))
-    return text
+    - Pokud `value` je str, provede .replace() pro všechny klíče v `context`.
+    - Pokud je `value` dict, rekurzivně zpracuje všechny položky.
+    - Pokud je `value` list, rekurzivně zpracuje všechny prvky.
+    - Jinak hodnotu vrátí beze změn.
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        # Nahrazujeme v řetězci
+        for k, v in context.items():
+            placeholder = f"{{{{{k}}}}}"
+            value = value.replace(placeholder, str(v))
+        return value
+    elif isinstance(value, dict):
+        # Rekurzivně zpracujeme všechny položky slovníku
+        new_dict = {}
+        for dict_key, dict_val in value.items():
+            new_dict[dict_key] = replace_placeholders(dict_val, context)
+        return new_dict
+    elif isinstance(value, list):
+        # Rekurzivně zpracujeme všechny prvky seznamu
+        return [replace_placeholders(item, context) for item in value]
+    else:
+        # int, float, bool, nebo jiný typ => nic neměníme
+        return value
 
 async def send_to_websocket(group_name, message):
     """

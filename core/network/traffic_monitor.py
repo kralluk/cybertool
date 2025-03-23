@@ -33,7 +33,7 @@ async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name,
 
     # Tady vytvoříme list (nebo dict) detektorů
     detectors = [
-        BlockageDetector(target_ip, attacker_ip, block_timeout=10.0),
+        BlockageDetector(target_ip, attacker_ip, block_timeout=20.0),
         # Můžeme sem přidat další, např. DnsDetector, HttpDetector...
     ]
 

@@ -37,7 +37,6 @@ class Action(Document):
     success_keywords = ListField(StringField(), default=[])  # Klíčová slova pro úspěch
     options = DictField()  # Další volitelné parametry (např. pro Metasploit)
     python_function = StringField()  # Název Python funkce pro akci typu 'python'
-    category = StringField()  # Kategorie akce (např. "reconnaissance", "exploitation")
     mitre_tactic = StringField()  # MITRE ATT&CK taktika
     mitre_technique = StringField()  # MITRE ATT&CK technika
 

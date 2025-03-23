@@ -120,6 +120,8 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                 await send_to_websocket(group_name, "Scénář byl zastaven uživatelem.")
                 return
 
+            print(f"Context= {context}")
+
         await send_to_websocket(group_name, "Scénář byl úspěšně dokončen.")
         
     finally:

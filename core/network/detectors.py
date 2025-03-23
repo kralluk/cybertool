@@ -5,7 +5,7 @@ class BlockageDetector:
     Detektor blokace na základě RST, ICMP administratively prohibited
     a časové heuristiky (pokud cíl X sekund neposlal packet útočníkovi).
     """
-    def __init__(self, target_ip, attacker_ip, block_timeout=10.0): # Defaultn9 je 5 sekund
+    def __init__(self, target_ip, attacker_ip, block_timeout=20.0): # Defaultn9 je 20 sekund
         self.target_ip = target_ip
         self.attacker_ip = attacker_ip
         self.block_timeout = block_timeout
