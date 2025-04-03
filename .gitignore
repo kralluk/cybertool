@@ -11,3 +11,5 @@ venv
 .vscode/
 pcaps/
 
+*.pcap.zst
+*.pcap

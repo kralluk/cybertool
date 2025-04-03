@@ -1,0 +1,3 @@
+FROM ghcr.io/arkime/arkime/arkime:v5-latest
+COPY --chmod=755 arkime_viewer_entrypoint.sh /arkime_viewer_entrypoint.sh
+ENTRYPOINT ["/bin/bash", "/arkime_viewer_entrypoint.sh"]
