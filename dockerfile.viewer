@@ -1,3 +1,8 @@
 FROM ghcr.io/arkime/arkime/arkime:v5-latest
+
+RUN groupadd -r arkimegroup && \
+    useradd -r -g arkimegroup arkimeuser
+
+
 COPY --chmod=755 arkime_viewer_entrypoint.sh /arkime_viewer_entrypoint.sh
 ENTRYPOINT ["/bin/bash", "/arkime_viewer_entrypoint.sh"]

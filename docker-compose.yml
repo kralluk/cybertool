@@ -30,12 +30,36 @@ services:
     networks:
       - cyberlab-net
    
+  # capture:
+  #   image: ghcr.io/arkime/arkime/arkime:v5-latest
+  #   container_name: arkime-capture
+  #   command: /opt/arkime/bin/docker.sh capture --update-geo
+  #   environment:
+  #     - ARKIME__elasticsearch=http://localhost:9200
+  #   volumes:
+  #     - ./arkime/raw:/opt/arkime/raw
+  #     - ./arkime/etc:/opt/arkime/etc
+  #   depends_on:
+  #     init:
+  #       condition: service_completed_successfully
+  #     elasticsearch:
+  #       condition: service_healthy
+  #   network_mode: host
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - NET_RAW
+  #   privileged: true
   capture:
-    image: ghcr.io/arkime/arkime/arkime:v5-latest
+    build:
+      context: .
+      dockerfile: dockerfile.capture
     container_name: arkime-capture
-    command: /opt/arkime/bin/docker.sh capture --update-geo
     environment:
       - ARKIME__elasticsearch=http://localhost:9200
+      # Pokud Arkime čte tyto hodnoty z konfiguračního souboru,
+      # ujisti se, že v ./arkime/etc/config.ini jsou tyto položky nastaveny:
+      # dropUser=arkimeuser
+      # dropGroup=arkimegroup
     volumes:
       - ./arkime/raw:/opt/arkime/raw
       - ./arkime/etc:/opt/arkime/etc
@@ -48,7 +72,7 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    privileged: true
+    privileged: true  
 
   viewer:
     build:
