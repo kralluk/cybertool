@@ -1,5 +1,5 @@
 from django.db import models
-from mongoengine import Document, StringField, ListField, DictField
+from mongoengine import Document, StringField, ListField, DictField, BooleanField
 
 class NetworkInfo(Document):
     interface = StringField(required=True, max_length=255)
@@ -39,6 +39,7 @@ class Action(Document):
     python_function = StringField()  # Název Python funkce pro akci typu 'python'
     mitre_tactic = StringField()  # MITRE ATT&CK taktika
     mitre_technique = StringField()  # MITRE ATT&CK technika
+    # run_in_msf_session = BooleanField(default=False)  # Spustit akci v rámci session metasploitu
 
 
     def __str__(self):

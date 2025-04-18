@@ -10,7 +10,7 @@ services:
       - xpack.security.transport.ssl.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     networks:
-      - cyberlab-net
+      - cybertool-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
       interval: 30s
@@ -28,27 +28,8 @@ services:
       - ./arkime/raw:/opt/arkime/raw
       - ./arkime/etc:/opt/arkime/etc
     networks:
-      - cyberlab-net
-   
-  # capture:
-  #   image: ghcr.io/arkime/arkime/arkime:v5-latest
-  #   container_name: arkime-capture
-  #   command: /opt/arkime/bin/docker.sh capture --update-geo
-  #   environment:
-  #     - ARKIME__elasticsearch=http://localhost:9200
-  #   volumes:
-  #     - ./arkime/raw:/opt/arkime/raw
-  #     - ./arkime/etc:/opt/arkime/etc
-  #   depends_on:
-  #     init:
-  #       condition: service_completed_successfully
-  #     elasticsearch:
-  #       condition: service_healthy
-  #   network_mode: host
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_RAW
-  #   privileged: true
+      - cybertool-net
+
   capture:
     build:
       context: .
@@ -56,10 +37,6 @@ services:
     container_name: arkime-capture
     environment:
       - ARKIME__elasticsearch=http://localhost:9200
-      # Pokud Arkime čte tyto hodnoty z konfiguračního souboru,
-      # ujisti se, že v ./arkime/etc/config.ini jsou tyto položky nastaveny:
-      # dropUser=arkimeuser
-      # dropGroup=arkimegroup
     volumes:
       - ./arkime/raw:/opt/arkime/raw
       - ./arkime/etc:/opt/arkime/etc
@@ -92,7 +69,7 @@ services:
       elasticsearch:
         condition: service_healthy
     networks:
-      - cyberlab-net
+      - cybertool-net
 
   mongodb:
     image: mongo:6.0
@@ -110,7 +87,7 @@ services:
       while true; do sleep 300; mongodump --uri=mongodb://localhost:27017 --db=cybertest_tool --out=/data/backup; done
       "
     networks:
-      - cyberlab-net
+      - cybertool-net
 
   mongo-express:
     image: mongo-express:1.0.0-alpha.4
@@ -122,7 +99,7 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/cybertest_tool
       ME_CONFIG_SITE_SESSIONSECRET: "supersecret"
     networks:
-      - cyberlab-net
+      - cybertool-net
 
   metasploit:
     build: 
@@ -136,5 +113,5 @@ volumes:
   mongo-data:
 
 networks:
-  cyberlab-net:
+  cybertool-net:
     driver: bridge

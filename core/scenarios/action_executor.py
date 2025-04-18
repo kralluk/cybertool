@@ -2,10 +2,13 @@ import asyncio
 import subprocess, paramiko
 import os
 import signal
+import json
+import time
 from .globals import check_scenario_status, running_processes, ssh_manager
 from .services import replace_placeholders, send_to_websocket
 from .ssh_manager import SSHManager
 from pymetasploit3.msfrpc import MsfRpcClient
+import traceback
 
 
 async def execute_action(action, parameters, context, group_name):
@@ -18,8 +21,10 @@ async def execute_action(action, parameters, context, group_name):
     if command:
         command = replace_placeholders(command, parameters)
 
-
-    if action_type == "local":
+    if action_type == "local" and parameters.get("run_in_msf_session", False):
+        # Pokud je akce typu "local" a má být spuštěna v  metasploit session, zavoláme funkci pro Metasploit session
+        return await execute_metasploit_session_command(command, context, group_name)
+    elif action_type == "local":
         return await execute_local_command(command, group_name)
     elif action_type == "ssh":
         return await execute_ssh_command(action, parameters, group_name)
@@ -110,80 +115,154 @@ async def execute_ssh_command(action, parameters, group_name):
         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
         return False, str(e)
     
+
+from pymetasploit3.msfrpc import MsfRpcClient
+
+
 async def execute_metasploit_action(action, parameters, context, group_name):
-    """
-    Spustí Metasploit exploit (nebo libovolný 'exploit' modul)
-    s ohledem na placeholdery definované v akci (options).
+    await send_to_websocket(group_name, f"Spouštím exploit {action['_id']}...")
+    # Nahrazení placeholderů dle contextu
+    options = replace_placeholders(action.get("options", {}), context)
+    await send_to_websocket(group_name, f"Nastavení pro exploit: {options}")
+    loop = asyncio.get_event_loop()
+
+    def run_exploit_with_console():
+        try:
+            # Připojení k Metasploit serveru
+            client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+            # Uložíme si seznam session před spuštěním exploitu
+            old_sessions = client.sessions.list.copy()
+
+            # Vytvoříme novou konzoli
+            console = client.consoles.console()
+            
+            # Použijeme modul specifikovaný v options (např. "exploit/unix/irc/unreal_ircd_3281_backdoor")
+            module_str = options.get("module")
+            if not module_str:
+                return {"error": "Chybí nastavený modul"}
+            console.write(f"use {module_str}")
+            
+            # Nastavení dalších voleb kromě modulu a payloadu
+            for key, value in options.items():
+                if key in ("module", "PAYLOAD"):
+                    continue
+                # Příkaz typu "set <key> <value>"
+                console.write(f"set {key} {value}")
+            
+            # Nastavení payloadu
+            chosen_payload = options.get("PAYLOAD")
+            if chosen_payload:
+                console.write(f"set PAYLOAD {chosen_payload}")
+            else:
+                return {"error": "Chybí nastavený payload"}
+            
+            # Spuštění exploitu
+            console.write("run")
+            
+            # Polling – čekáme na výstup konzole až do timeoutu (60 sekund)
+            output = ""
+            session_opened = False
+            start = time.time()
+            while time.time() - start < 60:
+                out = console.read()
+                if out:
+                    # Pokud je výstup dict, převedeme ho na řetězec
+                    if isinstance(out, dict):
+                        out_str = json.dumps(out, ensure_ascii=False)
+                    else:
+                        out_str = out
+                    output += out_str
+                    if "Command shell session" in out_str:
+                        session_opened = True
+                        break
+                time.sleep(2)
+            
+            # Pokud se session otevřela, načteme aktuální session a získáme ID nové session
+            session_id = None
+            if session_opened:
+                new_sessions = client.sessions.list
+                created_sessions = set(new_sessions.keys()) - set(old_sessions.keys())
+                if created_sessions:
+                    session_id = list(created_sessions)[0]
+            
+            # (Volitelně) Můžeš odstranit část, která testuje příkaz whoami
+            whoami_output = ""
+            if session_opened:
+                console.write("whoami")
+                start2 = time.time()
+                while time.time() - start2 < 30:
+                    out = console.read()
+                    if out:
+                        if isinstance(out, dict):
+                            data = out.get("data", "")
+                            whoami_output += data
+                        else:
+                            whoami_output += out
+                        if whoami_output.strip():
+                            break
+                    time.sleep(2)
+            
+            return {
+                "console_output": output,
+                "session_opened": session_opened,
+                "whoami": whoami_output,
+                "session_id": session_id
+            }
+        except Exception as ex:
+            return {"error": str(ex)}
     
-    Navíc:
-      - RHOSTS, RPORT apod. zapisuje do `exploit[...]`
-      - LHOST, LPORT zapisuje do `payload[...]`
-    """
-    # 1) Načteme options z akce (co definoval JSON v DB)
-    final_options = action.get("options", {})
+    await send_to_websocket(group_name, "Připojuji se k Metasploit serveru pomocí konzole a spouštím exploit...")
+    result = await loop.run_in_executor(None, run_exploit_with_console)
+    
+    if "error" in result:
+        error_message = f"Chyba při spuštění exploitu: {result['error']}"
+        await send_to_websocket(group_name, error_message)
+        return (False, error_message)
+    
+    if not result.get("session_opened"):
+        msg = "Exploit byl zadán, ale nebyla otevřena žádná interaktivní session."
+        await send_to_websocket(group_name, msg)
+        return (False, json.dumps({"exploit": result}, ensure_ascii=False))
+    
+    # Uložíme session_id do contextu, aby další kroky mohly s ní pracovat
+    context["session_id"] = result.get("session_id")
+    
+    await send_to_websocket(group_name, "Exploit dokončen.")
+    await send_to_websocket(group_name, f"Active session otevřena, session_id: {result.get('session_id')}, uložena do kontextu a whoami výstup: {result['whoami']}")
+    
+    combined_result = {"exploit": result}
+    return (True, json.dumps(combined_result, ensure_ascii=False))
 
-    # 2) Sloučíme parametry (ze scénáře) a context
-    placeholder_context = {**context, **parameters}
+async def execute_metasploit_session_command(command, context, group_name=None):
+    print(">>> !!!!!!!!!!!!!!!!!!!!!!! Spouštím příkaz v Metasploit session:", command)
+    from pymetasploit3.msfrpc import MsfRpcClient
+    loop = asyncio.get_event_loop()
+    
+    def run_command():
+        session_id = context.get("session_id")
+        print("session_id:", session_id)
+        if not session_id:
+            return (False, "Session ID není dostupné.")
 
-    # 3) Nahradíme placeholdery rekurzivně (ať umí i dict)
-    replaced_options = replace_placeholders(final_options, placeholder_context)
+        try:
+            client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+            session = client.sessions.session(session_id)
+            # print(">>> Echo test:", session.run_cmd("echo hello"))
+            # output = session.run_cmd(command)
+            session.write(command)
+            output = session.read()
+            return (True, output)
+        
 
-    # 4) Získáme module_name
-    module_name = replaced_options.pop("module", None)
-    if not module_name:
-        return False, "Chybí 'module' v options."
+        except Exception as e:
+            traceback.print_exc()
+            return False, f"Chyba v run_cmd: {e}"
+    
+    # 1) Spustíme v executor vlákně
+    success, output = await loop.run_in_executor(None, run_command)
 
-    # 5) Připojení k Metasploit RPC
-    client = MsfRpcClient('mysecret', server='127.0.0.1', port=55553)
+        # 2) Pošleme na frontend
+    if group_name:
+        await send_to_websocket(group_name, f" Výstup: {output}")
 
-    # 6) Vytvoření exploitu
-    exploit = client.modules.use('exploit', module_name)
-
-    # 7) Nastavení voleb do exploitu, s výjimkou LHOST/LPORT/PAYLOAD
-    for key, value in list(replaced_options.items()):
-        up_key = key.upper()
-        # PAYLOAD, LHOST, LPORT budeme řešit níže pro payload
-        if up_key in ("PAYLOAD", "LHOST", "LPORT"):
-            continue
-        exploit[key] = value
-
-    # 8) Pokud je definován PAYLOAD, nastavíme ho
-    payload_name = replaced_options.get("PAYLOAD")
-    if payload_name:
-        payload = client.modules.use('payload', payload_name)
-        # Pokud v replaced_options je LHOST/LPORT, dáme ho do payload
-        lhost_val = replaced_options.get("LHOST")
-        if lhost_val:
-            payload["LHOST"] = lhost_val
-
-        lport_val = replaced_options.get("LPORT")
-        if lport_val:
-            payload["LPORT"] = lport_val
-    else:
-        payload = None
-
-    # 9) Spuštění exploitu
-    job_result = exploit.execute(payload=payload)
-    if not job_result:
-        return False, "Nebyl vytvořen job pro exploit."
-
-    # Může vrátit buď int job_id, nebo dict { 'job_id': int, 'uuid': ... }
-    if isinstance(job_result, dict):
-        actual_job_id = job_result.get("job_id")
-    else:
-        actual_job_id = job_result
-
-    if not actual_job_id:
-        return False, "Nepodařilo se získat job_id."
-
-    # 10) Polling na dokončení jobu (max 30s)
-    for _ in range(30):
-        if actual_job_id not in client.jobs.list:
-            break
-        await asyncio.sleep(1)
-
-    if actual_job_id in client.jobs.list:
-        return False, "Exploit stále běží, vypršel timeout."
-
-    # 11) Případně analyzuj session, logs, atd.
-    return True, "Exploit skončil úspěšně."
+    return success, output
