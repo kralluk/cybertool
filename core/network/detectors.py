@@ -1,5 +1,11 @@
-import time
+import time, asyncio
+from pymetasploit3.msfrpc import MsfRpcClient
+from core.scenarios.services import send_to_websocket
+from core.scenarios.globals import stop_scenario_execution
 
+
+
+# Detekor blokace pro realtime monitoring TSHARKu
 class BlockageDetector:
     """
     Detektor blokace na základě RST, ICMP administratively prohibited
@@ -48,3 +54,47 @@ class BlockageDetector:
             print(f"[BlockageDetector] cíl {self.target_ip} se odmlčel na více než {self.block_timeout} s.")
             context["ip_blocked"] = True
             self.blockage_reported = True
+
+class MetasploitSessionDetector:
+    """
+    Detektor, který hlídá, jestli prostřelená Metasploit session stále běží.
+    Jakmile session zanikne, zapíše do context['msf_session_closed'] = True.
+    """
+    def __init__(self, session_id: str, group_name: str, context: dict, poll_interval: float = 5.0):
+        self.session_id = str(session_id)
+        self.group = group_name
+        self.context = context
+        self.interval = poll_interval
+        self.client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+        self._running = True
+
+    async def start(self):
+        while self._running: # and not stop_scenario_execution():
+            try:
+                # 1) Zkontrolujeme, zda je session stále v seznamu
+                session_ids = list(map(str, self.client.sessions.list.keys()))
+                if self.session_id not in session_ids:
+                    await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session.")
+                    self.context["msf_session_closed"] = True
+                    break
+
+                # 2) Zkusíme lehkou interakci – echo
+                sess = self.client.sessions.session(self.session_id)
+                try:
+                    sess.write(" ")  # pokud to vyhodí, session je pryč
+                except Exception:
+                    await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session")
+                    self.context["msf_session_closed"] = True
+                    break
+
+            except Exception as e:
+                print(f"[MetasploitSessionDetector] Chyba detektoru: {e}")
+                # v případě chyby rozhodneme o ukončení detektoru
+                break
+
+            await asyncio.sleep(self.interval)
+
+        # await send_to_websocket(self.group, "[MetasploitSessionDetector] Detektor ukončen.")
+
+    def stop(self):
+        self._running = False

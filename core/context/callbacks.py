@@ -19,3 +19,5 @@ async def ip_blocked_callback(key, value, group_name, context):
         
         # Nastavíme flag, který způsobí, že aktuální krok se ukončí a scénář přejde na vyhodnocení branchí
         context["force_end_current_step"] = True
+
+

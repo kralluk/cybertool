@@ -226,6 +226,18 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     
     # Uložíme session_id do contextu, aby další kroky mohly s ní pracovat
     context["session_id"] = result.get("session_id")
+
+
+    # Spuštíme detektor pro sledování stavu session
+    from core.network.detectors import MetasploitSessionDetector
+    asyncio.create_task(
+        MetasploitSessionDetector(
+            session_id=result.get("session_id"),
+            group_name=group_name,
+            context=context,
+            poll_interval=5.0
+        ).start()
+    )
     
     await send_to_websocket(group_name, "Exploit dokončen.")
     await send_to_websocket(group_name, f"Active session otevřena, session_id: {result.get('session_id')}, uložena do kontextu a whoami výstup: {result['whoami']}")
@@ -234,21 +246,17 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     return (True, json.dumps(combined_result, ensure_ascii=False))
 
 async def execute_metasploit_session_command(command, context, group_name=None):
-    print(">>> !!!!!!!!!!!!!!!!!!!!!!! Spouštím příkaz v Metasploit session:", command)
     from pymetasploit3.msfrpc import MsfRpcClient
     loop = asyncio.get_event_loop()
     
     def run_command():
         session_id = context.get("session_id")
-        print("session_id:", session_id)
         if not session_id:
             return (False, "Session ID není dostupné.")
 
         try:
             client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
             session = client.sessions.session(session_id)
-            # print(">>> Echo test:", session.run_cmd("echo hello"))
-            # output = session.run_cmd(command)
             session.write(command)
             output = session.read()
             return (True, output)

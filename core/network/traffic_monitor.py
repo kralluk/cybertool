@@ -31,13 +31,12 @@ async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name,
         stderr=asyncio.subprocess.PIPE
     )
 
-    # Tady vytvoříme list (nebo dict) detektorů
+    # Tady vytvoříme list (nebo dict) detektorů PRO TSHARK
     detectors = [
         BlockageDetector(target_ip, attacker_ip, block_timeout=20.0),
-        # Můžeme sem přidat další, např. DnsDetector, HttpDetector...
+        # V Budoucnu může být víc detektorů, např.: DNS, HTTP, ...
     ]
 
-    # Spustíme asynchronní smyčku
     task = asyncio.create_task(_realtime_analysis_loop(process, group_name, context, detectors))
 
     return process, task 
