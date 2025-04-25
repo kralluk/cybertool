@@ -8,7 +8,7 @@ import asyncio
 from core.network.traffic_monitor import start_realtime_analysis, stop_realtime_analysis
 from core.models import NetworkInfo
 from core.context.observable_context import ObservableContext
-from core.context.callbacks import ip_blocked_callback
+from core.context.callbacks import ip_blocked_callback,msf_session_closed_callback
 
 from channels.layers import get_channel_layer
 
@@ -39,6 +39,10 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         print("IP adresa pro útočníka nebyla nalezena.")
     
     context.register_callback("ip_blocked", lambda key, value: ip_blocked_callback(key, value, group_name, context))
+    context.register_callback(
+        "msf_session_closed",
+        lambda key, value: msf_session_closed_callback(key, value, group_name, context)
+    )
 
     print(f"Context: {context}")
 

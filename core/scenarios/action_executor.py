@@ -245,32 +245,78 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     combined_result = {"exploit": result}
     return (True, json.dumps(combined_result, ensure_ascii=False))
 
-async def execute_metasploit_session_command(command, context, group_name=None):
-    from pymetasploit3.msfrpc import MsfRpcClient
-    loop = asyncio.get_event_loop()
+# async def execute_metasploit_session_command(command, context, group_name=None):
+#     from pymetasploit3.msfrpc import MsfRpcClient
+#     loop = asyncio.get_event_loop()
     
-    def run_command():
-        session_id = context.get("session_id")
-        if not session_id:
-            return (False, "Session ID není dostupné.")
+#     def run_command():
+#         session_id = context.get("session_id")
+#         if not session_id:
+#             return (False, "Session ID není dostupné.")
 
-        try:
-            client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
-            session = client.sessions.session(session_id)
-            session.write(command)
-            output = session.read()
-            return (True, output)
+#         try:
+#             client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+#             session = client.sessions.session(session_id)
+#             session.write(command)
+#             output = session.read()
+#             return (True, output)
         
 
-        except Exception as e:
-            traceback.print_exc()
-            return False, f"Chyba v run_cmd: {e}"
+#         except Exception as e:
+#             traceback.print_exc()
+#             return False, f"Chyba v run_cmd: {e}"
     
-    # 1) Spustíme v executor vlákně
-    success, output = await loop.run_in_executor(None, run_command)
+#     # 1) Spustíme v executor vlákně
+#     success, output = await loop.run_in_executor(None, run_command)
 
-        # 2) Pošleme na frontend
-    if group_name:
-        await send_to_websocket(group_name, f" Výstup: {output}")
+#         # 2) Pošleme na frontend
+#     if group_name:
+#         await send_to_websocket(group_name, f" Výstup: {output}")
 
-    return success, output
+#     return success, output
+
+async def execute_metasploit_session_command(command, context, group_name=None):
+    """
+    Spustí cmd ve stávající Metasploit session a průběžně čte výstup,
+    dokud uživatel nestiskne stop, nebo nenastane force_end_current_step,
+    nebo msf_session_closed.
+    """
+    from pymetasploit3.msfrpc import MsfRpcClient
+
+    session_id = context.get("session_id")
+    if not session_id:
+        return False, "Session ID není dostupné."
+
+    client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+    session = client.sessions.session(session_id)
+    session.write(command)
+
+    loop = asyncio.get_event_loop()
+    while True:
+        # 1) Priorita: ukončení scénáře
+        if check_scenario_status():
+            return True, "Zastaveno uživatelem."
+
+        # 2) Callbacky pro force_end_current_step nebo msf_session_closed
+        if context.get("force_end_current_step") or context.get("msf_session_closed"):
+            return True, "Ukončeno callbackem."
+
+        # 3) Pokusíme se přečíst výstup; pokud chybí pole 'data', považujeme session za uzavřenou
+        try:
+            out = await loop.run_in_executor(None, session.read)
+        except KeyError:
+            # označíme v contextu, že session zmizela
+            context["msf_session_closed"] = True
+            await send_to_websocket(group_name, f"[msf:{session_id}] Session byla uzavřena obětí.")
+            return True, "Session ukončena obětí."
+        except Exception as e:
+            # jiné chyby jen zalogujeme a ukončíme
+            await send_to_websocket(group_name, f"[msf:{session_id}] Chyba čtení session: {e}")
+            return False, str(e)
+
+        # 4) Když máme nějaký výstup, pošleme ho na frontend
+        if out:
+            await send_to_websocket(group_name, f"[msf:{session_id}] {out}")
+
+        # 5) Krátká pauza před dalším čtením
+        await asyncio.sleep(0.2)

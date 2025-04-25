@@ -74,7 +74,7 @@ class MetasploitSessionDetector:
                 # 1) Zkontrolujeme, zda je session stále v seznamu
                 session_ids = list(map(str, self.client.sessions.list.keys()))
                 if self.session_id not in session_ids:
-                    await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session.")
+                    # await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session.")
                     self.context["msf_session_closed"] = True
                     break
 
@@ -83,7 +83,7 @@ class MetasploitSessionDetector:
                 try:
                     sess.write(" ")  # pokud to vyhodí, session je pryč
                 except Exception:
-                    await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session")
+                    # await send_to_websocket(self.group, "[MetasploitSessionDetector] Detekována pravděpodobné ukončení session")
                     self.context["msf_session_closed"] = True
                     break
 
