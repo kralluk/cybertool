@@ -9,6 +9,8 @@ from .services import replace_placeholders, send_to_websocket
 from .ssh_manager import SSHManager
 from pymetasploit3.msfrpc import MsfRpcClient
 import traceback
+from core.scenarios.globals import set_msf_session
+
 
 
 async def execute_action(action, parameters, context, group_name):
@@ -226,6 +228,9 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     
     # Uložíme session_id do contextu, aby další kroky mohly s ní pracovat
     context["session_id"] = result.get("session_id")
+    msf_client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
+    set_msf_session(msf_client, result["session_id"])
+
 
 
     # Spuštíme detektor pro sledování stavu session
@@ -244,36 +249,6 @@ async def execute_metasploit_action(action, parameters, context, group_name):
     
     combined_result = {"exploit": result}
     return (True, json.dumps(combined_result, ensure_ascii=False))
-
-# async def execute_metasploit_session_command(command, context, group_name=None):
-#     from pymetasploit3.msfrpc import MsfRpcClient
-#     loop = asyncio.get_event_loop()
-    
-#     def run_command():
-#         session_id = context.get("session_id")
-#         if not session_id:
-#             return (False, "Session ID není dostupné.")
-
-#         try:
-#             client = MsfRpcClient("mysecret", server="127.0.0.1", port=55553)
-#             session = client.sessions.session(session_id)
-#             session.write(command)
-#             output = session.read()
-#             return (True, output)
-        
-
-#         except Exception as e:
-#             traceback.print_exc()
-#             return False, f"Chyba v run_cmd: {e}"
-    
-#     # 1) Spustíme v executor vlákně
-#     success, output = await loop.run_in_executor(None, run_command)
-
-#         # 2) Pošleme na frontend
-#     if group_name:
-#         await send_to_websocket(group_name, f" Výstup: {output}")
-
-#     return success, output
 
 async def execute_metasploit_session_command(command, context, group_name=None):
     """

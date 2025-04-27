@@ -14,10 +14,17 @@ scenario_lock = Lock()
 running_processes = []
 
 ssh_manager = None  # Uchovává SSH připojení
+metasploit_session = None  # Uchovává Metasploit session
+
+
+def set_msf_session(client: MsfRpcClient, session_id: str):
+    global msf_client, msf_session_id
+    msf_client = client
+    msf_session_id = str(session_id)
 
 def stop_scenario_execution():
     """Nastaví stop_scenario na True a zastaví všechny běžící procesy."""
-    global stop_scenario, ssh_manager
+    global stop_scenario, ssh_manager, msf_client, msf_session_id
     with scenario_lock:
         stop_scenario = True
 
@@ -37,6 +44,16 @@ def stop_scenario_execution():
     if ssh_manager:
         asyncio.create_task(ssh_manager.stop_process())  # Zavoláme zastavení běžících SSH procesů
         print("Všechny SSH procesy ukončeny.")
+    
+    if msf_client and msf_session_id:
+        try:
+            msf_client.sessions.session(msf_session_id).stop()
+            print(f"MSF session {msf_session_id} ukončena.")
+        except Exception as e:
+            print(f"Chyba při ukončení MSF session {msf_session_id}: {e}")
+        # a vyčistíme
+        msf_session_id = None
+        msf_client = None
 
 def check_scenario_status():
     """Vrátí aktuální stav stop_scenario, synchronizovaně."""
@@ -57,20 +74,6 @@ def set_ssh_manager(manager):
     ssh_manager = manager
     print(f"SSH Manager byl úspěšně nastaven: {ssh_manager}")
 
-# def stop_attack_processes():
-#     """
-#     Zastaví všechny aktuálně běžící útokové procesy, aniž by zastavila celý scénář.
-#     (Tedy neovlivní globální flag stop_scenario.)
-#     """
-#     for process in running_processes:
-#         try:
-#             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-#             print(f"Proces {process.pid} byl úspěšně ukončen.")
-#         except ProcessLookupError:
-#             print(f"Proces {process.pid} už neběží.")
-#         except Exception as e:
-#             print(f"Chyba při ukončení procesu {process.pid}: {e}")
-#     running_processes.clear()
 
 def stop_attack_processes(include_metasploit=False, context=None):
     # 1) lokální procesy
@@ -91,5 +94,6 @@ def stop_attack_processes(include_metasploit=False, context=None):
         # pokud máme session
         session_id = context.get("session_id")
         if session_id is not None:
-            try: client.sessions.stop(session_id)
-            except: pass
+            try: client.sessions.session(session_id).stop()
+            except:
+                pass
