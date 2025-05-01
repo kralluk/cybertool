@@ -91,10 +91,14 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                 await send_to_websocket(group_name, f"Scénář ukončen.")
                 return
 
+
+
             # Aktualizace kontextu na základě výsledku akce
             update_context(context, step, output, success)
-            # await send_to_websocket(group_name, f"Krok {step['step_id']} byl úspěšně dokončen. {step.get('success_message', '')}")
+
             await send_to_websocket(group_name, f"Krok byl úspěšně dokončen. {replace_placeholders(step.get('success_message', ''), context)}")
+
+            context["force_end_current_step"] = False # Resetujeme flag pro vynucené ukončení kroku
 
             # Zkusíme spustit monitoring, pokud máme target_ip a sniffer ještě neběží
             if "target_ip" in context and not context.get("realtime_analysis_running"):
@@ -124,7 +128,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                 await send_to_websocket(group_name, "Scénář byl zastaven uživatelem.")
                 return
 
-            # print(f"Context= {context}")
+            print(f"Context= {context}")
 
         await send_to_websocket(group_name, "Scénář byl úspěšně dokončen.")
         

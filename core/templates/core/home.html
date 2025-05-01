@@ -6,41 +6,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <script src="{% static 'js/change_network.js' %}" defer></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <title>CyberTool</title>
 
 </head>
-<body>
-    <h1>CybertTool</h1>
-    <p>Testovaná síť: {{ current_network }}</p>
-    
-    <h2>Změnit testovanou síť</h2>
-    {% if message %}
-        <p style="color: green;">{{ message }}</p>
-    {% endif %}
+<body class="container py-5">
 
-    <form id="networkForm" method="post">
-        {% csrf_token %}
-        <label for="networkSelect">Vyberte síť:</label>
-        <select id="networkSelect" name="network" required>
-            {% for network in networks %}
-                <option value="{{ network.network }}" {% if network.network == current_network %} selected {% endif %}>
-                    {{ network.interface }} - {{ network.network }}
-                </option>
-            {% endfor %}
-        </select>
-        <!-- {% for network in networks %}
-        <p>Network: "{{ network.network }}" Current: "{{ current_network }}"</p>
-        {% endfor %} -->
-        <button type="submit">Změnit</button>
-    </form>
+    <h1 class="text-center mb-5">CyberTool</h1>
 
-    <h2>Možnosti:</h2>
-    <ul>
-        <li><a href="/scan-network/" target="_blank">Skenovat aktuální síť</a></li>
-        <li><a href="/scenarios/">Zobrazit dostupné scénáře</a></li>
-        <li><a href="scenario_maker">Tvorba scénářů - budoucnost</a></li>
-        <!-- <li><a href="/change-network/">Změnit testovanou síť</a></li> -->
-        <!-- <li><a href="/execute-scenario/">Spustit scénář útoku</a></li> -->
-    </ul>
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+
+            <div class="card shadow mb-4">
+                <div class="card-body text-center">
+                    <h4 class="card-title mb-3">Aktuální síť</h4>
+                    <p class="card-text display-6">{{ current_network }}</p>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <h4 class="card-title mb-4 text-center">Přepnout testovanou síť</h4>
+
+                    {% if message %}
+                        <div class="alert alert-success text-center" role="alert">{{ message }}</div>
+                    {% endif %}
+
+                    <form id="networkForm" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="networkSelect" class="form-label">Vyberte síť:</label>
+                            <select id="networkSelect" name="network" class="form-select" required>
+                                {% for network in networks %}
+                                    <option value="{{ network.network }}" {% if network.network == current_network %} selected {% endif %}>
+                                        {{ network.interface }} - {{ network.network }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Potvrdit změnu</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow">
+                <div class="card-body">
+                    <h4 class="card-title mb-4 text-center">Možnosti</h4>
+                    <div class="d-grid gap-3">
+                        <a href="/scan-network/" target="_blank" class="btn btn-outline-primary">🔍 Skenovat aktuální síť</a>
+                        <a href="/scenarios/" class="btn btn-outline-secondary">📋 Scénáře</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
 </body>
 </html>

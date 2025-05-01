@@ -66,6 +66,13 @@ async def execute_local_command(command, group_name):
 
         stdout, stderr = await process.communicate()
         output = stdout.decode().strip() + "\n" + stderr.decode().strip()
+        output = output.strip()  # odstraní prázdné řádky na začátku a konci
+
+        if not output and not check_scenario_status():
+            await send_to_websocket(group_name, "Výstup je prázdný – akce selhala.")
+            return False, "Výstup příkazu byl prázdný."
+    
+        
 
         if process.returncode != 0 and not check_scenario_status():
             await send_to_websocket(group_name, f"Chyba při lokálním příkazu: {output}")
@@ -83,17 +90,54 @@ async def execute_local_command(command, group_name):
 
 
 
+# async def execute_ssh_command(action, parameters, group_name):
+#     """
+#     Spustí příkaz přes SSH a posílá průběžné zprávy přes WebSocket.
+#     """
+#     global ssh_manager
+#     try:
+#         # Načtení parametrů
+#         ssh_user = parameters.get("ssh_user")
+#         ssh_password = parameters.get("ssh_password")
+#         target_ip = parameters.get("target_ip")
+#         command = replace_placeholders(action["command"], parameters)
+
+#         if not ssh_user or not ssh_password or not target_ip:
+#             await send_to_websocket(group_name, "Chybí potřebné SSH parametry (ssh_user, ssh_password, target_ip).")
+#             return False, "Chybí SSH parametry."
+
+#         ssh_manager = SSHManager(target_ip, ssh_user, ssh_password, group_name)
+
+#         # Připojení k SSH
+#         if not await ssh_manager.connect():
+#             return False, "Nepodařilo se připojit k SSH."
+
+#         # Spuštění příkazu
+#         success, output = await ssh_manager.execute_command(command, use_sudo=True)
+
+#         # Odpojení od SSH
+#         await ssh_manager.close()
+
+#         return success, output
+
+#     except Exception as e:
+#         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
+#         return False, str(e)
+
+
+
+
+
 async def execute_ssh_command(action, parameters, group_name):
     """
-    Spustí příkaz přes SSH a posílá průběžné zprávy přes WebSocket.
+    Spustí příkaz přes SSH a případně nahraje a spustí .py skript, pokud jde o akci ssh_run_python_script.
+    Posílá průběžné zprávy přes WebSocket.
     """
     global ssh_manager
     try:
-        # Načtení parametrů
         ssh_user = parameters.get("ssh_user")
         ssh_password = parameters.get("ssh_password")
         target_ip = parameters.get("target_ip")
-        command = replace_placeholders(action["command"], parameters)
 
         if not ssh_user or not ssh_password or not target_ip:
             await send_to_websocket(group_name, "Chybí potřebné SSH parametry (ssh_user, ssh_password, target_ip).")
@@ -103,12 +147,47 @@ async def execute_ssh_command(action, parameters, group_name):
 
         # Připojení k SSH
         if not await ssh_manager.connect():
+            await send_to_websocket(group_name, "Nepodařilo se připojit k SSH. Ukončuji krok jako neúspěšný.")
             return False, "Nepodařilo se připojit k SSH."
 
-        # Spuštění příkazu
-        success, output = await ssh_manager.execute_command(command, use_sudo=True)
+        use_sudo = True  # výchozí hodnota
 
-        # Odpojení od SSH
+        # Pokud se jedná o spuštění Python skriptu
+        if action["_id"] == "ssh_run_python_script":
+            script_name = parameters.get("script_name")
+
+            if not script_name:
+                await send_to_websocket(group_name, "Chybí parametr 'script_name'.")
+                return False, "Chybí parametr 'script_name'."
+
+            if ".." in script_name or "/" in script_name:
+                return False, "Neplatný název skriptu."
+
+            local_path = os.path.join("scripts", script_name)
+            remote_path = f"/tmp/{script_name}"
+
+            if not os.path.isfile(local_path):
+                await send_to_websocket(group_name, f"Skript '{script_name}' neexistuje.")
+                return False, f"Skript '{script_name}' neexistuje."
+
+            loop = asyncio.get_event_loop()
+            success, msg = await loop.run_in_executor(None, lambda: ssh_manager.upload_file(local_path, remote_path))
+
+            if not success:
+                await send_to_websocket(group_name, f"Nahrávání skriptu selhalo: {msg}")
+                return False, msg
+
+            await send_to_websocket(group_name, f"Skript '{script_name}' byl úspěšně nahrán.")
+            command = f"python3 {remote_path}"
+            use_sudo = False  # ⬅️ NEpoužívat sudo pro spouštění Python skriptu
+
+        else:
+            command = replace_placeholders(action["command"], parameters)
+
+        # Spuštění příkazu
+        success, output = await ssh_manager.execute_command(command, use_sudo=use_sudo)
+
+        # Odpojení
         await ssh_manager.close()
 
         return success, output
@@ -116,10 +195,6 @@ async def execute_ssh_command(action, parameters, group_name):
     except Exception as e:
         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
         return False, str(e)
-    
-
-from pymetasploit3.msfrpc import MsfRpcClient
-
 
 async def execute_metasploit_action(action, parameters, context, group_name):
     await send_to_websocket(group_name, f"Spouštím exploit {action['_id']}...")
@@ -282,7 +357,7 @@ async def execute_metasploit_session_command(command, context, group_name=None):
         except KeyError:
             # označíme v contextu, že session zmizela
             context["msf_session_closed"] = True
-            await send_to_websocket(group_name, f"[msf:{session_id}] Session byla uzavřena obětí.")
+            # await send_to_websocket(group_name, f"[msf:{session_id}] Session byla uzavřena obětí.")
             return True, "Session ukončena obětí."
         except Exception as e:
             # jiné chyby jen zalogujeme a ukončíme

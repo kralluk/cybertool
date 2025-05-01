@@ -3,15 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <title>Detail scénáře</title>
 </head>
-<body>
-    <h1>Detail scénáře: {{ scenario.name }}</h1>
-    <p>{{ scenario.description }}</p>
+<body class="container py-5 text-center">
 
-    <button onclick="runScenario('{{ scenario.id }}')">Spustit scénář</button>
-    <button onclick="stopScenario()">Zastavit scénář</button>
-    <div id="log"></div>
+    <h1 class="mb-4">{{ scenario.name }}</h1>
+    <p class="mb-4">{{ scenario.description }}</p>
+
+    <div class="mb-4">
+        <button class="btn btn-success me-2" onclick="runScenario('{{ scenario.id }}')">Spustit scénář</button>
+        <button class="btn btn-danger me-2" onclick="stopScenario()">Zastavit scénář</button>
+        <button class="btn btn-warning" onclick="clearConsole()">Vyčistit konzoli</button>
+    </div>
+
+    <div id="log" 
+         class="mx-auto p-4 mb-4" 
+         style="
+            background-color: #1e1e1e; 
+            color: #d4d4d4; 
+            font-family: monospace; 
+            height: 500px; 
+            width: 90%; 
+            max-width: 1000px;
+            overflow-y: auto; 
+            border-radius: 8px;
+            text-align: left;
+            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+         ">
+        <!-- Zprávy se budou přidávat sem -->
+    </div>
+
+    <p><a href="/" class="btn btn-link">Zpět na hlavní stránku</a></p>
 
     <script>
         let socket;
@@ -22,19 +47,20 @@
 
             socket.onopen = function() {
                 console.log("WebSocket připojen.");
-                // Posíláme požadavek na spuštění scénáře
-                socket.send(JSON.stringify({
-                    action: "start_scenario"
-                }));
+                socket.send(JSON.stringify({ action: "start_scenario" }));
             };
 
             socket.onmessage = function(event) {
-                console.log("Zpráva od serveru:", event.data);  // Pro debugging
+                console.log("Zpráva od serveru:", event.data);
                 const data = JSON.parse(event.data);
                 const logDiv = document.getElementById('log');
-                const message = document.createElement('p');
-                message.textContent = data.message;
+
+                const message = document.createElement('div');
+                message.textContent = "> " + data.message;
+                message.style.marginBottom = "5px";
+
                 logDiv.appendChild(message);
+                logDiv.scrollTop = logDiv.scrollHeight; // Scroll dolů na novou zprávu
             };
 
             socket.onclose = function() {
@@ -52,7 +78,11 @@
                 console.log("Scénář zastaven.");
             }
         }
+
+        function clearConsole() {
+            location.reload(); // Prostě reload celé stránky
+        }
     </script>
-    <p><a href="/">Zpět na hlavní stránku</a></p>
+
 </body>
 </html>

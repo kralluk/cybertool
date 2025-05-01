@@ -28,7 +28,7 @@ def stop_scenario_execution():
     with scenario_lock:
         stop_scenario = True
 
-    # Ukončení všech běžících procesů
+    # Ukončení všech běžících procesů   
     for process in running_processes:
         try:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
@@ -45,15 +45,19 @@ def stop_scenario_execution():
         asyncio.create_task(ssh_manager.stop_process())  # Zavoláme zastavení běžících SSH procesů
         print("Všechny SSH procesy ukončeny.")
     
-    if msf_client and msf_session_id:
-        try:
-            msf_client.sessions.session(msf_session_id).stop()
-            print(f"MSF session {msf_session_id} ukončena.")
-        except Exception as e:
-            print(f"Chyba při ukončení MSF session {msf_session_id}: {e}")
-        # a vyčistíme
-        msf_session_id = None
-        msf_client = None
+    try:
+        if msf_client and msf_session_id:
+            try:
+                msf_client.sessions.session(msf_session_id).stop()
+                print(f"MSF session {msf_session_id} ukončena.")
+            except Exception as e:
+                print(f"Chyba při ukončení MSF session {msf_session_id}: {e}")
+            # Vyčištění
+            msf_session_id = None
+            msf_client = None
+    except NameError:
+        # Pokud msf_client nebo msf_session_id ještě neexistuje, nic nedělej
+        pass
 
 def check_scenario_status():
     """Vrátí aktuální stav stop_scenario, synchronizovaně."""

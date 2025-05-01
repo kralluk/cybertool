@@ -50,7 +50,7 @@ async def execute_python_action(action, parameters, context, group_name):
             # Bereme to jako (True, result)
             success, output = True, result
         
-        await send_to_websocket(group_name, f"Výstup: {output}")
+        await send_to_websocket(group_name, f"Výstup: {output}") # možná smazat?
         return success, output
 
     except Exception as e:
@@ -191,3 +191,49 @@ async def plc_injection_1(parameters, context, group_name):
 
     
     myplc.disconnect()
+
+
+@register_python_action("plc_monitor_injection_1")
+async def plc_monitor_injection_1(parameters, context, group_name):
+    import snap7
+    import asyncio
+
+    target_ip = parameters.get("target_ip")
+    interval = int(parameters.get("interval", 5))  # výchozí 5 sekund
+    db_number = 11
+    start = 0
+    size = 1
+
+    client = snap7.client.Client()
+    
+    try:
+        client.connect(target_ip, 0, 2)
+        if not client.get_connected():
+            await send_to_websocket(group_name, "Nepodařilo se připojit k PLC.")
+            return False, "Nepodařilo se připojit k PLC."
+
+        await send_to_websocket(group_name, f"Monitoruji blok DB{db_number}, offset {start}, size {size}...")
+
+        # Přečti původní hodnotu
+        original_data = client.db_read(db_number, start, size)
+        await send_to_websocket(group_name, f"Původní hodnota: {original_data}")
+
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                current_data = client.db_read(db_number, start, size)
+            except Exception as read_error:
+                await send_to_websocket(group_name, f"Chyba při čtení z PLC: {str(read_error)}")
+                return True, "Ztráta připojení nebo blokace přístupu k PLC."
+
+            if current_data != original_data:
+                await send_to_websocket(group_name, f"Detekována změna v DB{db_number}@{start}: {current_data}")
+                context["plc_injection_change_detected"] = True
+                return True, f"Detekována změna v PLC datech: {current_data}"
+
+    except Exception as e:
+        await send_to_websocket(group_name, f"Chyba při připojení nebo monitorování: {str(e)}")
+        return False, str(e)
+    
+    finally:
+        client.disconnect()

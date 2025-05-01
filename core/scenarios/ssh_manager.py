@@ -71,9 +71,9 @@ class SSHManager:
             output = output.decode().strip()
             error = error.decode().strip()
 
-            if error:
-                await self.send_to_websocket(f"Chyba při spuštění příkazu: {error}")
-                return False, error
+            if error or "Traceback (most recent call last):" in output:
+                await self.send_to_websocket(f"Chyba při spuštění příkazu:\n{output or error}")
+                return False, output or error
 
             await self.send_to_websocket(f"Výstup příkazu: {output}")
             return True, output
@@ -127,3 +127,15 @@ class SSHManager:
                     yield f"ERROR: {line.strip()}"
 
             await asyncio.sleep(0.1)  # Malá prodleva, aby se zabránilo blokování
+
+    def upload_file(self, local_path, remote_path):
+        """
+        Nahraje soubor na vzdálený stroj přes SFTP.
+        """
+        try:
+            sftp = self.client.open_sftp()
+            sftp.put(local_path, remote_path)
+            sftp.close()
+            return True, f"Soubor byl úspěšně nahrán na {remote_path}"
+        except Exception as e:
+            return False, f"Chyba při nahrávání souboru: {str(e)}"
