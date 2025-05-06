@@ -40,7 +40,7 @@ from core.models import NetworkInfo
 def home_view(request):
     networks = NetworkInfo.objects.all()
     current_network = request.session.get('current_network', None)
-    
+
     message = None  # Výchozí hodnota pro hlášení
 
     # Zpracování změny sítě, pokud byl odeslán formulář

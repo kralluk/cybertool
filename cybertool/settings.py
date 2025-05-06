@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'cybertool.asgi.application' # Pridal jsem
 
 
+
 CHANNEL_LAYERS = { # pridal jsem
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer",

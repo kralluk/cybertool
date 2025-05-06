@@ -133,9 +133,11 @@ class SSHManager:
         Nahraje soubor na vzdálený stroj přes SFTP.
         """
         try:
+            print(f"local_path: {local_path}")
             sftp = self.client.open_sftp()
             sftp.put(local_path, remote_path)
             sftp.close()
             return True, f"Soubor byl úspěšně nahrán na {remote_path}"
         except Exception as e:
             return False, f"Chyba při nahrávání souboru: {str(e)}"
+

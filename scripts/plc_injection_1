@@ -1,20 +1,65 @@
-import snap7
+import os
+import subprocess
 
+try:
+    import snap7
+except ImportError:
+    print("snap7 není nainstalován. Pokouším se o instalaci...")
+
+    try:
+        files = os.listdir(".")
+        snap7_whl = next((f for f in files if f.startswith("Apython_snap7") and f.endswith(".whl")), None)
+
+        if snap7_whl:
+            whl_path = os.path.abspath(snap7_whl)
+            print(f"Nalezen .whl balíček: {whl_path}")
+            try:
+                subprocess.check_call(
+                    ["python3", "-m", "pip", "install", whl_path],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL   #subprocess.check_call(["python3", "-m", "pip", "install", whl_path])
+                )
+            except subprocess.CalledProcessError:
+                print("Instalace z .whl selhala, zkouším s příznakem --break-system-packages...")
+                subprocess.check_call(
+                    ["python3", "-m", "pip", "install", whl_path, "--break-system-packages"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+        else:
+            raise FileNotFoundError("Lokální .whl soubor pro snap7 nebyl nalezen.")
+
+    except Exception as e:
+        print(f"Nepodařilo se nainstalovat z lokálního souboru: {e}")
+        print("Zkouším instalaci přes internet...")
+
+        try:
+            subprocess.check_call(
+                ["python3", "-m", "pip", "install", "python-snap7"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            print("Instalace přes internet selhala, zkouším s příznakem --break-system-packages...")
+            subprocess.check_call(
+                ["python3", "-m", "pip", "install", "python-snap7", "--break-system-packages"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+
+    import snap7  # Nový pokus o import
+    print("snap7 byl úspěšně nainstalován.")
+
+# Zbytek skriptu
 myplc = snap7.client.Client()
 
-myplc.connect('192.168.50.111',0,2)
+myplc.connect('192.168.50.111', 0, 2)
 
-print(myplc.get_connected())
-print(myplc.get_cpu_state())
-print(myplc.db_read(11,0,1))
- 
+print("Připojeno:", myplc.get_connected())
+print("Stav CPU:", myplc.get_cpu_state())
+print("Původní hodnota:", myplc.db_read(11, 0, 1))
 
-data = myplc.db_read(11,0,1)
+data = myplc.db_read(11, 0, 1)
 program_on = b'\x04'
 fake_data = b'\x00'
 
-print(fake_data)
-print(type(program_on))
+print("Falešná data:", fake_data)
+print("Typ:", type(program_on))
 
- 
-myplc.db_write(11,0,fake_data)
+myplc.db_write(11, 0, fake_data)

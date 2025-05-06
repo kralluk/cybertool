@@ -180,6 +180,35 @@ async def execute_ssh_command(action, parameters, group_name):
             await send_to_websocket(group_name, f"Skript '{script_name}' byl úspěšně nahrán.")
             command = f"python3 {remote_path}"
             use_sudo = False  # ⬅️ NEpoužívat sudo pro spouštění Python skriptu
+        
+        elif action["_id"] == "ssh_upload_file":
+            file_name = parameters.get("file_name")
+
+            if not file_name:
+                await send_to_websocket(group_name, "Chybí parametr 'file_name'.")
+                return False, "Chybí parametr 'file_name'."
+
+            if ".." in file_name or "/" in file_name:
+                return False, "Neplatný název souboru."
+
+            local_path = os.path.join("files", file_name)  
+            remote_path = f"{file_name}"
+            
+
+            if not os.path.isfile(local_path):
+                await send_to_websocket(group_name, f"Soubor '{file_name}' neexistuje.")
+                return False, f"Soubor '{file_name}' neexistuje."
+
+            loop = asyncio.get_event_loop()
+            success, msg = await loop.run_in_executor(None, lambda: ssh_manager.upload_file(local_path, remote_path))
+
+            if not success:
+                await send_to_websocket(group_name, f"Nahrávání souboru selhalo: {msg}")
+                return False, msg
+
+            await send_to_websocket(group_name, f"Soubor '{file_name}' byl úspěšně nahrán.")
+            await ssh_manager.close()
+            return True, f"Soubor '{file_name}' úspěšně nahrán na cílové zařízení."
 
         else:
             command = replace_placeholders(action["command"], parameters)

@@ -5,6 +5,8 @@ import  asyncio
 
 class ScenarioConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        print("[DEBUG] Session při připojení:", dict(self.scope["session"]))
+
         self.scenario_id = self.scope['url_route']['kwargs']['scenario_id']
         self.group_name = f"scenario_{self.scenario_id}"
 
@@ -14,11 +16,6 @@ class ScenarioConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         await self.accept()
-
-        # # Debug: Zpráva po připojení
-        # await self.send(text_data=json.dumps({
-        #     "message": f"WebSocket připojen ke scénáři {self.scenario_id}."
-        # }))
 
     async def receive(self, text_data):
         data = json.loads(text_data)

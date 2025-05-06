@@ -44,7 +44,7 @@ async def execute_scenario(scenario_id, selected_network, group_name):
         lambda key, value: msf_session_closed_callback(key, value, group_name, context)
     )
 
-    print(f"Context: {context}")
+    # print(f"Context: {context}")
 
     # Převod seznamu kroků do slovníku pro snadný přístup podle step_id
     steps = {step["step_id"]: step for step in scenario["steps"]}

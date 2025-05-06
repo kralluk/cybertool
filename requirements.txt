@@ -3,7 +3,7 @@ mongoengine
 django-debug-toolbar
 netifaces
 psutil
-python-nmapq
+python-nmap
 psycopg2-binary
 pexpect
 channels
