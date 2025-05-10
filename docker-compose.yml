@@ -84,7 +84,7 @@ services:
       bash -c "
       mongod --fork --logpath /var/log/mongodb.log --bind_ip_all &&
       mongorestore --uri=mongodb://localhost:27017 /data/backup &&
-      while true; do sleep 300; mongodump --uri=mongodb://localhost:27017 --db=cybertest_tool --out=/data/backup; done
+      while true; do sleep 300; mongodump --uri=mongodb://localhost:27017 --db=cybertest_tool --out=/data/backup --excludeCollection=network_info; done
       "
     networks:
       - cybertool-net
