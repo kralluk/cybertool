@@ -26,7 +26,7 @@ async def msf_session_closed_callback(key, value, group_name, context):
 
 
     if key == "msf_session_closed" and value is True and not context.get("msf_session_closed_reported", False):
-        await send_to_websocket(group_name, "Detekována pravděpodobné ukončení Metasploit session ze strany oběti.")
+        await send_to_websocket(group_name, "Detekováno pravděpodobné ukončení Metasploit session ze strany oběti nebo jiná chyba se session.")
         stop_attack_processes(include_metasploit=True, context=context)
         context["force_end_current_step"] = True
         context["msf_session_closed_reported"] = True

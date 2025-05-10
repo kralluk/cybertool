@@ -8,7 +8,7 @@ except ImportError:
 
     try:
         files = os.listdir(".")
-        snap7_whl = next((f for f in files if f.startswith("Apython_snap7") and f.endswith(".whl")), None)
+        snap7_whl = next((f for f in files if f.startswith("python_snap7") and f.endswith(".whl")), None)
 
         if snap7_whl:
             whl_path = os.path.abspath(snap7_whl)

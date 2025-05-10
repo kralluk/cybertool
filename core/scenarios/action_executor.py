@@ -90,44 +90,6 @@ async def execute_local_command(command, group_name):
 
 
 
-# async def execute_ssh_command(action, parameters, group_name):
-#     """
-#     Spustí příkaz přes SSH a posílá průběžné zprávy přes WebSocket.
-#     """
-#     global ssh_manager
-#     try:
-#         # Načtení parametrů
-#         ssh_user = parameters.get("ssh_user")
-#         ssh_password = parameters.get("ssh_password")
-#         target_ip = parameters.get("target_ip")
-#         command = replace_placeholders(action["command"], parameters)
-
-#         if not ssh_user or not ssh_password or not target_ip:
-#             await send_to_websocket(group_name, "Chybí potřebné SSH parametry (ssh_user, ssh_password, target_ip).")
-#             return False, "Chybí SSH parametry."
-
-#         ssh_manager = SSHManager(target_ip, ssh_user, ssh_password, group_name)
-
-#         # Připojení k SSH
-#         if not await ssh_manager.connect():
-#             return False, "Nepodařilo se připojit k SSH."
-
-#         # Spuštění příkazu
-#         success, output = await ssh_manager.execute_command(command, use_sudo=True)
-
-#         # Odpojení od SSH
-#         await ssh_manager.close()
-
-#         return success, output
-
-#     except Exception as e:
-#         await send_to_websocket(group_name, f"Chyba při SSH příkazu: {str(e)}")
-#         return False, str(e)
-
-
-
-
-
 async def execute_ssh_command(action, parameters, group_name):
     """
     Spustí příkaz přes SSH a případně nahraje a spustí .py skript, pokud jde o akci ssh_run_python_script.
