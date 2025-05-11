@@ -97,38 +97,32 @@ http://127.0.0.1:8005
 Aplikace používá nástroje, jako je `tshark` nebo `hping3`, které vyžadují root oprávnění. Nejjednodušší cestou je tedy spouštění přes `sudo`. Pokud je to možné, doporučuje se vytvořit sandboxové prostředí nebo použít rozšířená oprávnění pouze pro konkrétní nástroje (např. pomocí `capabilities`).
 
 ---
-
-## 📁 Struktura projektu
-
-* `core/` – hlavní logika aplikace (scénáře, websockety, akce)
-* `templates/` – HTML šablony
-* `scripts/` – Python skripty pro vzdálené spouštění přes SSH
-* `files/` – lokálně připravené knihovny nebo doplňkové soubory
-
----
 ## 🛠️ Nezbytná infrastruktura pro běh aktuálních scénářů
 Databáze obsahuje tři scénáře, pro úspěšné použití těchto scénářů je potřeba mít stejné testovací prostředi, pro které jsou nastaveny, nebo upravit potřebné části jednotlivých scénářů.
 Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénářů.
 
 1. **Scénář 1: Nalezení VMWare zařízení a pingflood na něj s alternativní taktikou na blokaci**
    * => 1 VMWare zařízení v síti (Virtálka)
-     > nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže)
+     > nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže).
    * systém s IP adresou 192.168.50.12
-     > Použito jako defaultní IP adresa útoku v případě, že není nalezeno VMware zařízení
+     > Použito jako defaultní IP adresa útoku v případě, že není nalezeno VMware zařízení.
    * systém s dostupnou utilitou hping3 a ssh pod IP 192.168.50.18, s uživatelským jménem "utko" a heslem "radegast12"
      > při testování použito Raspberry Pi, IP adresu i přihlašovací údaje lze připadně změnit v parametrech scénáře.
 3. **Scénář 2: Identifikace zranitelností metasploitu, zneužití a spuštění UDP floodu ze získaného zařízení.**
    * Systém, na kterém se nachází zranitelnost UnrealIRCD 3.2.8.1 Backdoor nebo VSFTPD v2.3.4 Backdoor
-     > Nejjednoduší je použít VM Metasploitable 2 (https://www.rapid7.com/products/metasploit/metasploitable/)
-   * Systém s IP adresou 192.168.50.12 > Na tuto IP je proveden UDP flood, také je možno si ji přepsat ve scénáři dle potřeby.
+     > Nejjednoduší je použít VM Metasploitable 2 (https://www.rapid7.com/products/metasploit/metasploitable/).
+   * Systém s IP adresou 192.168.50.12
+     > Na tuto IP je proveden UDP flood, také je možno si ji přepsat ve scénáři dle potřeby.
 5. **Scénář 3: Nalezení PLC zařízení, injekce kodu pro zastavení běhu programu. Reakce na opravu kódu či blokaci útočníka.**
-
+   * PLC s otevřeným portem 102 protokolu S7
+   * systém s IP adresou 192.168.50.12 a povoleným ssh s uživatelským jménem "test" a heslem "test"
 ---
-## 📌 
-
+## 📌 Důležité adresáře
+* `scripts/` – Python skripty pro vzdálené spouštění přes SSH
+  > Tyto skripty bere akce ssh_run_python_script
+* `files/` – soubory, které bere akce
+  > Tyto soubory bere akce ssh_upload_file.
 ---
-
-
 
 ## 🎓 Licence a autor
 
