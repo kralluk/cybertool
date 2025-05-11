@@ -90,12 +90,6 @@ http://127.0.0.1:8005
 > **uživatel**: arkime
 > **heslo**: arkime
 ---
-
-## ⚠️ Poznámka ke spouštění pod rootem
-
-Aplikace používá nástroje, jako je `tshark` nebo `hping3`, které vyžadují root oprávnění. Nejjednodušší cestou je tedy spouštění přes `sudo`. Pokud je to možné, doporučuje se vytvořit sandboxové prostředí nebo použít rozšířená oprávnění pouze pro konkrétní nástroje (např. pomocí `capabilities`).
-
----
 ## 🛠️ Nezbytná infrastruktura pro běh aktuálních scénářů
 Databáze obsahuje tři scénáře, pro úspěšné použití těchto scénářů je potřeba mít stejné testovací prostředi, pro které jsou nastaveny, nebo upravit potřebné části jednotlivých scénářů.
 Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénářů.
