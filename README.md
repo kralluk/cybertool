@@ -72,10 +72,21 @@ sudo daphne -b 127.0.0.1 -p 8000 cybertool.asgi:application
 
 Po plném spuštění jsou dostupné adresy:
 
+1. **Hlavní rozhraní nástroje**
 ```
-http://127.0.0.1:8000 - hlavní rozhraní nástroje
+http://127.0.0.1:8000
 ```
-
+1. **Rozhraní Mongo Express pro správu scénářů a akcí**
+```
+http://127.0.0.1:8081
+```
+1. **Rozhraní síťové monitoringu Arkime**
+```
+http://127.0.0.1:8005
+```
+> Přihlašovací udaje:
+> **Uživatel**: arkime
+> **Heslo**: arkime
 ---
 
 ## ⚠️ Poznámka ke spouštění pod rootem
