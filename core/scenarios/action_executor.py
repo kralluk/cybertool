@@ -221,8 +221,8 @@ async def execute_metasploit_action(action, parameters, context, group_name):
             chosen_payload = options.get("PAYLOAD")
             if chosen_payload:
                 console.write(f"set PAYLOAD {chosen_payload}")
-            else:
-                return {"error": "Chybí nastavený payload"}
+            # else:
+            #     return {"error": "Chybí nastavený payload"}
             
             # Spuštění exploitu
             console.write("run")

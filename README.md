@@ -32,7 +32,7 @@ K úspěšnému spuštění aplikace jsou potřeba následující nástroje:
 1. **Klonování repozitáře**
 
 ```bash
-git clone https://github.com/tvoje-uzivatelske-jmeno/cybertool.git
+git clone https://github.com/kralluk/cybertool.git
 cd cybertool
 ```
 
@@ -40,7 +40,7 @@ cd cybertool
 
 ```bash
 python3 -m venv venv
-source venv/bin/activate
+. venv/bin/activate
 ```
 
 3. **Instalace python balíčků**
@@ -52,8 +52,10 @@ pip install -r requirements.txt
 4. **Build & start Docker kontejnerů** (na pozadí)
 
 ```bash
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
+>Případně ve starších verzích ```bash sudo docker-compose up -d ```
+
 > Prvotní start Dockeru může trvat poměrně dlouhou dobu, vzhledem ke stahování a vytváření všech potřebných Docker obrazů a závislotí.
 > Samotný proces inicializace všech kontejnerů taky zabere zhruba minutu až dvě, vzhledem k poměrně náročnému procesu spuštění Arkime.
 5. **Migrace databáze**
