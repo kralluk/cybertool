@@ -96,11 +96,11 @@ Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénář
 
 1. **Scénář 1: Nalezení VMWare zařízení a pingflood na něj s alternativní taktikou na blokaci**
    * => 1 VMWare zařízení v síti (Virtálka)
-     > nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže).
-   * systém s IP adresou 192.168.50.12
+     > Nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže).
+   * Systém s IP adresou 192.168.50.12
      > Použito jako defaultní IP adresa útoku v případě, že není nalezeno VMware zařízení.
-   * systém s dostupnou utilitou hping3 a ssh pod IP 192.168.50.18, s uživatelským jménem "utko" a heslem "radegast12"
-     > při testování použito Raspberry Pi, IP adresu i přihlašovací údaje lze připadně změnit v parametrech scénáře.
+   * Systém s dostupnou utilitou hping3 a ssh pod IP 192.168.50.18, s uživatelským jménem "utko" a heslem "radegast12"
+     > Při testování použito Raspberry Pi, IP adresu i přihlašovací údaje lze připadně změnit v parametrech scénáře.
 3. **Scénář 2: Identifikace zranitelností metasploitu, zneužití a spuštění UDP floodu ze získaného zařízení.**
    * Systém, na kterém se nachází zranitelnost UnrealIRCD 3.2.8.1 Backdoor nebo VSFTPD v2.3.4 Backdoor
      > Nejjednoduší je použít VM Metasploitable 2 (https://www.rapid7.com/products/metasploit/metasploitable/).
@@ -108,13 +108,16 @@ Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénář
      > Na tuto IP je proveden UDP flood, také je možno si ji přepsat ve scénáři dle potřeby.
 5. **Scénář 3: Nalezení PLC zařízení, injekce kodu pro zastavení běhu programu. Reakce na opravu kódu či blokaci útočníka.**
    * PLC s otevřeným portem 102 protokolu S7
-   * systém s IP adresou 192.168.50.12 a povoleným ssh s uživatelským jménem "test" a heslem "test"
+   * Systém s IP adresou 192.168.50.12 a povoleným ssh s uživatelským jménem "test" a heslem "test"
+   * ❗Nutnost změnit ve scénáří použitou knihovnu v kroku číslo 6 (step_id: 6) použitou knihovnu pro nahrání dle procesorové architektury cílového zařízení
+     > Defaultní je knihovna pro ARM64, ve složce *files* se, pro případ potřeby, nachází i pro achitekturu x86_64, stačí tedy pouze hodnotu parametru *file_name* na odpovídající soubor.
+     
 ---
 ## 📌 Důležité adresáře
 * `scripts/` – Python skripty pro vzdálené spouštění přes SSH
-  > Tyto skripty bere akce ssh_run_python_script
+  > Tyto skripty bere akce *ssh_run_python_script*.
 * `files/` – soubory, které bere akce
-  > Tyto soubory bere akce ssh_upload_file.
+  > Tyto soubory bere akce *ssh_upload_file*.
 ---
 
 ## 🎓 Licence a autor
