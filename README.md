@@ -95,7 +95,7 @@ Databáze obsahuje tři scénáře, pro úspěšné použití těchto scénář�
 Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénářů.
 
 1. **Scénář 1: Nalezení VMWare zařízení a pingflood na něj s alternativní taktikou na blokaci**
-   * => 1 VMWare zařízení v síti (Virtálka)
+   * => 1 VMWare zařízení v síti (Virtuálka)
      > Nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže).
    * Systém s IP adresou 192.168.50.12
      > Použito jako defaultní IP adresa útoku v případě, že není nalezeno VMware zařízení.
@@ -113,11 +113,13 @@ Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénář
      > Defaultní je knihovna pro ARM64, ve složce *files* se, pro případ potřeby, nachází i pro achitekturu x86_64, stačí tedy pouze hodnotu parametru *file_name* na odpovídající soubor.
      
 ---
-## 📌 Důležité adresáře
+## 📌 Důležité adresáře a konfigurační soubory
 * `scripts/` – Python skripty pro vzdálené spouštění přes SSH
   > Tyto skripty bere akce *ssh_run_python_script*.
 * `files/` – soubory, které bere akce
   > Tyto soubory bere akce *ssh_upload_file*.
+* `arkime/etc/config.ini` – Konfigurační soubor pro Arkime 
+  > Podstatná je část **interface**, zde lze středníkem oddělit monirované interfacy (defautlně se monitoruje eth0 a eth1). Po změně je nutné restartovat Docker Compose a tím opakovat inicializnační proces.
 ---
 
 ## 🎓 Licence a autor
