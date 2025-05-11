@@ -25,8 +25,6 @@ K úspěšnému spuštění aplikace jsou potřeba následující nástroje:
 * `tshark`
 * `hping3`
 
-> Většina testovacích funkcí vyžaduje administrátorská oprávnění (např. pro spouštění paketových útoků nebo manipulaci se síťovými rozhraními).
-
 ---
 
 ## 🔧 Instalace
