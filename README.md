@@ -54,7 +54,8 @@ pip install -r requirements.txt
 ```bash
 sudo docker-compose up -d
 ```
-
+> Prvotní start Dockeru může trvat poměrně dlouho dobu, vzhledem ke stahování a vytvářeních všech potřebných Docker obrazů a závislotí.
+> Samotný proces inicializace všech kontejnerů taky zabere zhruba minutu až dvě, vzhledem k poměrně náročnému procesu spuštění Arkime.
 5. **Migrace databáze**
 
 ```bash
