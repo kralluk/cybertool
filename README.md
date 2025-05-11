@@ -2,9 +2,12 @@
 
 ## ✨ Popis projektu
 
-CyberTool je webová aplikace určená pro simulaci útoků včetně rozpoznání zranitelných služeb, jejich zneužití a vyhodnocení reakcí obranných mechanismů. Umožňuje definovat vlastní ústupové scénáře, jež se provádí krok po kroku, a poskytuje uživateli průěžné informace pomocí WebSocketů.
+CyberTool je webová aplikace určená pro vytváření automatizovaných útoků se začleněním obranné reakce modrých týmů. Nástroj má sloužit pro výukové účely, kdy se modrý tým bude učit zdokonalit své reakce na probíhající útok, přičemž nástroj má za úkol hledat alternativní cesty průchodu ke svému cíli a zmařit snahu obranného týmu.
+
+Nástroj obsahuje scénáře, jež jsou uloženy v databázi MongoDB, pro jednoduchou správu databáze je implementováno rozhraní Mongo Express.
 
 Aplikace je postavena na frameworku **Django** a používá **ASGI server Daphne** pro podporu asynchronních požadavků a WebSocket komunikace.
+Po spuštění scénáře jsou uživateli poskytnuty průběžné informace o průběhu útoku.
 
 ---
 
@@ -60,12 +63,12 @@ sudo docker-compose up -d
 python manage.py migrate
 ```
 
-6. **Spuštění ASGI serveru Daphne**
+6. **Spuštění samotného nástroje**
 
 ```bash
-sudo daphne -b 127.0.0.1 -p 8000 cybertool.asgi:application
+sudo venv/bin/daphne -b 127.0.0.1 -p 8000 cybertool.asgi:application
 ```
-
+> Většina využívaných funkcí vyžaduje administrátorská oprávnění, proto je třeba spouštet nástroj za použití sudo. 
 ---
 
 ## 🚀 Spuštění aplikace
@@ -85,8 +88,8 @@ http://127.0.0.1:8081
 http://127.0.0.1:8005
 ```
 > Přihlašovací udaje:
-> **Uživatel**: arkime
-> **Heslo**: arkime
+> **uživatel**: arkime
+> **heslo**: arkime
 ---
 
 ## ⚠️ Poznámka ke spouštění pod rootem
@@ -103,6 +106,23 @@ Aplikace používá nástroje, jako je `tshark` nebo `hping3`, které vyžadují
 * `files/` – lokálně připravené knihovny nebo doplňkové soubory
 
 ---
+## 🛠️ Nezbytná infrastruktura pro běh aktuálních scénářů
+Databáze obsahuje tři scénáře, pro úspěšné použití těchto scénářů je potřeba mít stejné testovací prostředi, pro které jsou nastaveny, nebo upravit potřebné části jednotlivých scénářů.
+Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénářů.
+
+1. **Scénář 1: Nalezení VMWare zařízení a pingflood na něj s alternativní taktikou na blokaci**
+   * => 1 VMWare zařízení v síti (Virtálka) > nutně být nemusí, pokud scénář takový systém nenajde, zaútočí na defatulní IP (viz níže)
+   * systém s IP adresou 192.168.50.12 > Použito jako defaultní IP adresa útoku v případě, že není nalezeno VMware zařízení
+   * systém s dostupnou utilitou hping3 a ssh pod IP 192.168.50.18, s uživatelským jménem "utko" a heslem "radegast12" > při testování použito Raspberry Pi
+3. **Scénář 2: Identifikace zranitelností metasploitu, zneužití a spuštění UDP floodu ze získaného zařízení.**
+4. **Scénář 3: Nalezení PLC zařízení, injekce kodu pro zastavení běhu programu. Reakce na opravu kódu či blokaci útočníka.**
+
+---
+## 📌 
+
+---
+
+
 
 ## 🎓 Licence a autor
 
