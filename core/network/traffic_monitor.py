@@ -33,7 +33,7 @@ async def start_realtime_analysis(interface, target_ip, attacker_ip, group_name,
 
     # Tady vytvoříme list (nebo dict) detektorů PRO TSHARK
     detectors = [
-        BlockageDetector(target_ip, attacker_ip, block_timeout=30.0),
+        BlockageDetector(target_ip, attacker_ip, block_timeout=60.0),
         # V Budoucnu může být víc detektorů, např.: DNS, HTTP, ...
     ]
 

@@ -24,7 +24,7 @@ K úspěšnému spuštění aplikace jsou potřeba následující nástroje:
 * `nmap`
 * `tshark`
 * `hping3`
-
+> Docker společně s Docker Compose lze nainstalovat dle návodu viz https://docs.docker.com/engine/install/.
 ---
 
 ## 🔧 Instalace
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 ```bash
 sudo docker compose up -d
 ```
->Případně ve starších verzích ```bash sudo docker-compose up -d ```
+>Případně ve starších verzích ```sudo docker-compose up -d```
 
 > Prvotní start Dockeru může trvat poměrně dlouhou dobu, vzhledem ke stahování a vytváření všech potřebných Docker obrazů a závislotí.
 > Samotný proces inicializace všech kontejnerů taky zabere zhruba minutu až dvě, vzhledem k poměrně náročnému procesu spuštění Arkime.
