@@ -92,19 +92,15 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                 return
 
 
-
             # Aktualizace kontextu na základě výsledku akce
             update_context(context, step, output, success)
 
-            await send_to_websocket(group_name, f"Krok byl úspěšně dokončen. {replace_placeholders(step.get('success_message', ''), context)}")
-
+            if not context.get("force_end_current_step"):
+                await send_to_websocket(group_name, f"Krok byl úspěšně dokončen. {replace_placeholders(step.get('success_message', ''), context)}")
+            
             context["force_end_current_step"] = False # Resetujeme flag pro vynucené ukončení kroku
 
-            # Zkusíme spustit monitoring, pokud máme target_ip a sniffer ještě neběží
-            if "target_ip" in context and not context.get("realtime_analysis_running"):
-                context["realtime_analysis_running"] = True
-                await start_realtime_analysis(interface, context["target_ip"], context["attacker_ip"], group_name, context)
-                # Můžeš si to uložit i do contextu, ale stačí do lokálních proměnných
+       
 
             # Zpracování větvení: pokud je definováno pole "branches", vyhodnotíme podmínky
             if "branches" in step:
@@ -117,12 +113,24 @@ async def execute_scenario(scenario_id, selected_network, group_name):
                         # Pokud definované, vypíšeme branch_message
                         if "branch_message" in branch:
                             await send_to_websocket(group_name, replace_placeholders(branch["branch_message"],context))
+                                   # Aplikace context_updates z větve
+                        if "context_updates" in branch:
+                            for key, value in branch["context_updates"].items():
+                                context[key] = replace_placeholders(value, context)
+
                         break
                 if not branch_taken:
                     # Pokud žádná větev neodpovídá, použijeme standardní next_step
                     current_step_id = step.get("next_step", None)
             else:
                 current_step_id = step.get("next_step", None)
+            
+
+                 # Zkusíme spustit monitoring, pokud máme target_ip a sniffer ještě neběží
+            if "target_ip" in context and not context.get("realtime_analysis_running"):
+                context["realtime_analysis_running"] = True
+                await start_realtime_analysis(interface, context["target_ip"], context["attacker_ip"], group_name, context)
+                # Můžeš si to uložit i do contextu, ale stačí do lokálních proměnných
 
             if check_scenario_status():
                 await send_to_websocket(group_name, "Scénář byl zastaven uživatelem.")

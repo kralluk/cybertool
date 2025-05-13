@@ -7,8 +7,5 @@ RUN groupadd -r arkimegroup && \
 # Ujistíme se, že adresář pro PCAP soubory je vytvořen a má správná práva
 RUN mkdir -p /opt/arkime/raw && chown -R arkimeuser:arkimegroup /opt/arkime/raw
 
-# (Volitelně: lze nastavit i práva pro /opt/arkime/etc, pokud je potřeba)
-# RUN chown -R arkimeuser:arkimegroup /opt/arkime/etc
-
 # Spouštíme capture proces, původní entrypoint zůstává
 CMD ["/opt/arkime/bin/docker.sh", "capture", "--update-geo"]

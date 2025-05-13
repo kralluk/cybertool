@@ -68,9 +68,9 @@ async def execute_local_command(command, group_name):
         output = stdout.decode().strip() + "\n" + stderr.decode().strip()
         output = output.strip()  # odstraní prázdné řádky na začátku a konci
 
-        if not output and not check_scenario_status():
-            await send_to_websocket(group_name, "Výstup je prázdný – akce selhala.")
-            return False, "Výstup příkazu byl prázdný."
+        # if not output and not check_scenario_status():
+        #     await send_to_websocket(group_name, "Výstup je prázdný – akce selhala.")
+        #     return False, "Výstup příkazu byl prázdný."
     
         
 
