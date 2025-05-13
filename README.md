@@ -5,6 +5,8 @@
 CyberTool je webová aplikace určená pro vytváření automatizovaných útoků se začleněním obranné reakce modrých týmů. Nástroj má sloužit pro výukové účely, kdy se modrý tým bude učit zdokonalit své reakce na probíhající útok, přičemž nástroj má za úkol hledat alternativní cesty průchodu ke svému cíli a zmařit snahu obranného týmu.
 
 Nástroj obsahuje scénáře, jež jsou uloženy v databázi MongoDB, pro jednoduchou správu databáze je implementováno rozhraní Mongo Express.
+Nástroj taktéž zavádí monitoring sítě pomocí Arkime.
+
 
 Aplikace je postavena na frameworku **Django** a používá **ASGI server Daphne** pro podporu asynchronních požadavků a WebSocket komunikace.
 Po spuštění scénáře jsou uživateli poskytnuty průběžné informace o průběhu útoku.
