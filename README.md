@@ -112,7 +112,7 @@ Níže jsou rozepsány potřebné časti infrastruktury pro každý ze scénář
      > Na tuto IP je proveden UDP flood, také je možno si ji přepsat ve scénáři dle potřeby.
 5. **Scénář 3: Nalezení PLC zařízení, injekce kodu pro zastavení běhu programu. Reakce na opravu kódu či blokaci útočníka.**
    * PLC s otevřeným portem 102 protokolu S7
-   * Systém s IP adresou 192.168.50.12 a povoleným ssh s uživatelským jménem "test" a heslem "test"
+   * Systém s IP adresou 192.168.50.12 a povoleným ssh s uživatelským jménem "test" a heslem "test" a přítomným pythonem
    * ❗Nutnost změnit ve scénáří použitou knihovnu v kroku číslo 6 (step_id: 6) použitou knihovnu pro nahrání dle procesorové architektury cílového zařízení.
      > Defaultní je knihovna pro ARM64 kvůli prostředí na kterém byl nástroj vytvářen. Je tedy nutno (přes pip download python-snap7 knihovnu pro alternativní architekturu stáhnout, vložit do adresáře *files* a přepsat hodnotu parametru *file_name* v daném kroku na odpovídající soubor). Knihovnu je teoreticky nutno přizpůsobit architektuře, jen v případě, že si uživatel chce otestovat vzdálenou lokální instalaci předaného balíčku, scénář je vytvořen tak, že pokud se nepodaří lokální instalace, provede se instalace standardně přes pip. Alternativně tedy stačí mít na systému s IP adresou 192.168.50.12 (nebo změněnou) dostupný pip a přístup k internetu a není nutno řešit procesorovou architekturu.
      
